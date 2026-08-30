@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" 
+      th:replace="~{layout/base :: layout('Mesa de Ayuda', 'tickets', ~{::section})}">
+<head>
+    <title>Mesa de Ayuda - ServiClient</title>
+</head>
+<body>
+    <section>
+        <div class="page-header-row">
+            <div class="page-title-group">
+                <h1>Mesa de Ayuda</h1>
+                <p>Gestiona y realiza seguimiento a las solicitudes de soporte de tus clientes.</p>
+            </div>
+            <div>
+                <a th:href="@{/tickets/nuevo}" class="btn btn-primary">
+                    <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>Nuevo ticket</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Metric KPI Cards Grid (5 cards as in prototype) -->
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 28px;">
+            <div class="metric-card">
+                <div class="metric-card-label">
+                    <span>Tickets Abiertos</span>
+                    <svg style="width: 16px; height: 16px; color: var(--color-text-sub);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                </div>
+                <div class="metric-card-value" th:text="${metricas.ticketsAbiertos}">124</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-card-label">
+                    <span>En Proceso</span>
+                    <svg style="width: 16px; height: 16px; color: var(--color-primary);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </div>
+                <div class="metric-card-value" th:text="${metricas.enProceso}">45</div>
+            </div>
+
+            <div class="metric-card card-risk">
+                <div class="metric-card-label">
+                    <span style="color: #DC2626;">Críticos</span>
+                    <svg style="width: 16px; height: 16px; color: #DC2626;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <div class="metric-card-value text-riesgo" th:text="${metricas.criticos}">12</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-card-label">
+                    <span>Pendientes</span>
+                    <svg style="width: 16px; height: 16px; color: var(--color-text-sub);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="metric-card-value" th:text="${metricas.pendientes}">67</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-card-label">
+                    <span style="color: #DC2626;">Fuera de SLA</span>
+                    <svg style="width: 16px; height: 16px; color: #DC2626;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                </div>
+                <div class="metric-card-value text-riesgo" th:text="${metricas.fueraDeSla}">3</div>
+            </div>
+        </div>
+
+        <!-- Table Card -->
+        <div class="table-card">
+            <div class="table-toolbar">
+                <form th:action="@{/tickets}" method="get" class="table-search-group">
+                    <div style="position: relative;">
+                        <svg style="width: 16px; height: 16px; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--color-text-sub);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input type="text" name="busqueda" th:value="${busqueda}" class="input-search-table" placeholder="Buscar tickets, clientes..." onchange="this.form.submit()">
+                    </div>
+
+                    <select name="estado" class="form-select" style="width: 160px; padding: 7px 12px; font-size: 13px;" onchange="this.form.submit()">
+                        <option value="">Todos los estados</option>
+                        <option th:each="est : ${estados}" th:value="${est}" th:text="${est.etiqueta}" th:selected="${est == estadoSeleccionado}"></option>
+                    </select>
+
+                    <select name="prioridad" class="form-select" style="width: 160px; padding: 7px 12px; font-size: 13px;" onchange="this.form.submit()">
+                        <option value="">Todas las prioridades</option>
+                        <option th:each="pri : ${prioridades}" th:value="${pri}" th:text="${pri.etiqueta}" th:selected="${pri == prioridadSeleccionada}"></option>
+                    </select>
+                </form>
+            </div>
+
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Asunto</th>
+                        <th>Cliente</th>
+                        <th>Contacto</th>
+                        <th>Agente</th>
+                        <th>Categoría</th>
+                        <th>Prioridad</th>
+                        <th>Estado</th>
+                        <th style="text-align: right;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${ticketsPage.content.isEmpty()}">
+                        <td colspan="9" style="text-align: center; padding: 32px; color: var(--color-text-muted);">
+                            No se encontraron tickets con los criterios de búsqueda aplicados.
+                        </td>
+                    </tr>
+                    <tr th:each="t : ${ticketsPage.content}">
+                        <td style="font-weight: 700; color: var(--color-text-muted);" th:text="${t.codigo}">TK-4029</td>
+                        <td>
+                            <a th:href="@{/tickets/{id}(id=${t.id})}" style="font-weight: 700; color: var(--color-text-main); text-decoration: none;" th:text="${t.asunto}">Error al acceder al sistema</a>
+                        </td>
+                        <td th:text="${t.cliente != null ? t.cliente.nombreComercial : '-'}">Acme Corp</td>
+                        <td style="color: var(--color-text-muted);" th:text="${t.contacto != null ? t.contacto.email : (t.cliente != null and t.cliente.contactoPrincipal != null ? t.cliente.contactoPrincipal.email : '-')}">juan.perez@acme.com</td>
+                        <td th:text="${t.agente != null ? t.agente.nombreCompleto : 'Sin asignar'}">Ana García</td>
+                        <td th:text="${t.categoria.etiqueta}">Infraestructura</td>
+                        <td>
+                            <span class="badge" th:classappend="${t.prioridad.cssClass}" th:text="${t.prioridad.etiqueta}">Crítica</span>
+                        </td>
+                        <td>
+                            <span class="badge" th:classappend="${t.estado.cssClass}" th:text="${t.estado.etiqueta}">En proceso</span>
+                        </td>
+                        <td style="text-align: right;">
+                            <a th:href="@{/tickets/{id}(id=${t.id})}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+                                Ver detalle
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="table-pagination">
+                <span th:text="'Mostrando ' + ${ticketsPage.numberOfElements} + ' de ' + ${ticketsPage.totalElements} + ' tickets'">Mostrando 1 a 10 de 124 tickets</span>
+                <div style="display: flex; gap: 8px;">
+                    <a th:if="${ticketsPage.hasPrevious()}" th:href="@{/tickets(page=${ticketsPage.number - 1}, busqueda=${busqueda}, estado=${estadoSeleccionado}, prioridad=${prioridadSeleccionada})}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">Anterior</a>
+                    <a th:if="${ticketsPage.hasNext()}" th:href="@{/tickets(page=${ticketsPage.number + 1}, busqueda=${busqueda}, estado=${estadoSeleccionado}, prioridad=${prioridadSeleccionada})}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">Siguiente</a>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>
