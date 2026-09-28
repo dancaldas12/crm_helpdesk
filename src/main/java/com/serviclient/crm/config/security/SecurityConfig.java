@@ -54,6 +54,14 @@ public class SecurityConfig {
                 .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico").permitAll()
                 .requestMatchers("/login", "/registro/**", "/h2-console/**").permitAll()
+                // Swagger / OpenAPI — acceso público a la documentación
+                .requestMatchers(
+                    "/swagger-ui.html",
+                    "/swagger-ui/**",
+                    "/v3/api-docs",
+                    "/v3/api-docs/**",
+                    "/v3/api-docs.yaml"
+                ).permitAll()
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form

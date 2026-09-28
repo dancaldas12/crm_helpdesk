@@ -7,6 +7,11 @@ import com.serviclient.crm.entity.Usuario;
 import com.serviclient.crm.entity.enums.EstadoRenovacion;
 import com.serviclient.crm.service.RenovacionService;
 import com.serviclient.crm.service.UsuarioService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,15 +25,48 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Controlador MVC para el panel de Renovaciones de contratos.
+ *
+ * <p>Permite visualizar las renovaciones próximas a vencer, agrupadas por rangos
+ * de urgencia (0-15 días, 16-30 días, 31-60 días), y registrar seguimientos
+ * con cambios de estado.</p>
+ *
+ * <p><b>Rutas expuestas:</b></p>
+ * <pre>
+ * GET  /renovaciones             → panel de renovaciones con métricas y alertas
+ * POST /renovaciones/seguimiento  → registrar seguimiento de una renovación
+ * </pre>
+ *
+ * @author ServiClient Dev Team
+ * @version 1.0.0
+ * @see com.serviclient.crm.service.RenovacionService
+ */
 @Controller
 @RequestMapping("/renovaciones")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Renovaciones", description = "Control de contratos próximos a vencer, retención de ARR y registro de seguimientos comerciales")
 public class RenovacionController {
 
     private final RenovacionService renovacionService;
     private final UsuarioService usuarioService;
 
+    /**
+     * Muestra el panel de renovaciones con métricas, listado de renovaciones
+     * próximas a vencer y el formulario para registrar seguimientos.
+     *
+     * @param userDetails principal autenticado para obtener el {@code empresaId}
+     * @param model       modelo Thymeleaf con renovaciones, agentes y estados
+     * @return vista {@code renovaciones/index}
+     */
+    @Operation(
+        summary = "Panel de renovaciones",
+        description = "Muestra los contratos próximos a vencer con KPIs de valor total en riesgo (ARR), contratos críticos (< 15 días) y formulario modal para registrar seguimientos."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Panel de renovaciones cargado exitosamente")
+    })
     @GetMapping
     public String listarRenovaciones(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
         Long empresaId = (userDetails != null && userDetails.getEmpresaId() != null) ? userDetails.getEmpresaId() : 1L;
@@ -48,8 +86,26 @@ public class RenovacionController {
         return "renovaciones/index";
     }
 
+    /**
+     * Registra un nuevo seguimiento para una renovación específica.
+     * Actualiza el estado de la renovación y persiste el comentario del responsable.
+     *
+     * @param userDetails        principal autenticado
+     * @param dto                datos del seguimiento a registrar (renovacionId, estado, comentario)
+     * @param bindingResult      resultado de validaciones
+     * @param redirectAttributes atributos flash para el resultado
+     * @return redirección al panel de renovaciones
+     */
+    @Operation(
+        summary = "Registrar seguimiento de renovación",
+        description = "Registra una acción de contacto o negociación sobre un contrato próximo a vencer, actualizando su estado (EN_NEGOCIACION, RENOVADO, NO_RENOVADO, CANCELADO)."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "302", description = "Seguimiento guardado, redirige al panel de renovaciones")
+    })
     @PostMapping("/seguimiento")
     public String registrarSeguimiento(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                       @Parameter(description = "Datos del seguimiento de renovación")
                                        @Valid @ModelAttribute("nuevoSeguimiento") TicketMensajeDto.RegistrarSeguimientoRenovacion dto,
                                        BindingResult bindingResult,
                                        RedirectAttributes redirectAttributes) {

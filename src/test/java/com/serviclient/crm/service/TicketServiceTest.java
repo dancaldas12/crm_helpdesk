@@ -35,6 +35,12 @@ class TicketServiceTest {
     private EncuestaSatisfaccionRepository encuestaRepository;
 
     @Mock
+    private EncuestaCsatRepository encuestaCsatRepository;
+
+    @Mock
+    private RespuestaCsatRepository respuestaCsatRepository;
+
+    @Mock
     private ClienteRepository clienteRepository;
 
     @Mock
@@ -42,6 +48,12 @@ class TicketServiceTest {
 
     @Mock
     private UsuarioRepository usuarioRepository;
+
+    @Mock
+    private CategoriaTicketRepository categoriaTicketRepository;
+
+    @Mock
+    private ConfiguracionSlaRepository configuracionSlaRepository;
 
     @Mock
     private EmpresaService empresaService;
@@ -53,26 +65,31 @@ class TicketServiceTest {
     private TicketService ticketService;
 
     private Empresa empresa;
+    private RolEntity rolAgente;
     private Usuario agente;
     private Cliente cliente;
     private Ticket ticket;
+    private CategoriaTicketEntity catSoftware;
 
     @BeforeEach
     void setUp() {
         empresa = Empresa.builder()
                 .id(1L)
                 .nombreComercial("ServiClient")
-                .slaPrimerRespuestaHoras(4)
-                .slaResolucionHoras(48)
+                .build();
+
+        rolAgente = RolEntity.builder()
+                .id(2L)
+                .nombre("Agente de Soporte")
                 .build();
 
         agente = Usuario.builder()
                 .id(2L)
                 .empresa(empresa)
+                .rolEntity(rolAgente)
                 .nombre("Carlos")
                 .apellido("Ruiz")
                 .email("carlos@serviclient.com")
-                .rol(Rol.AGENTE)
                 .build();
 
         cliente = Cliente.builder()
@@ -81,19 +98,25 @@ class TicketServiceTest {
                 .nombreComercial("NovaTech")
                 .build();
 
+        catSoftware = CategoriaTicketEntity.builder()
+                .id(1L)
+                .empresa(empresa)
+                .nombre("Soporte Técnico")
+                .build();
+
         ticket = Ticket.builder()
                 .id(100L)
-                .codigo("TK-4029")
+                .numeroTicket("TK-4029")
                 .empresa(empresa)
                 .cliente(cliente)
+                .categoriaEntity(catSoftware)
                 .asunto("Problema de acceso")
                 .descripcion("No puede iniciar sesión")
-                .categoria(CategoriaTicket.SOFTWARE)
                 .prioridad(PrioridadTicket.ALTA)
                 .estado(EstadoTicket.ABIERTO)
-                .fechaCreacion(LocalDateTime.now())
-                .fechaLimitePrimeraRespuesta(LocalDateTime.now().plusHours(4))
-                .fechaLimiteResolucion(LocalDateTime.now().plusHours(48))
+                .createdAt(LocalDateTime.now())
+                .slaRespuestaLimite(LocalDateTime.now().plusHours(4))
+                .slaResolucionLimite(LocalDateTime.now().plusHours(48))
                 .build();
     }
 
@@ -112,6 +135,8 @@ class TicketServiceTest {
         when(empresaService.obtenerPorId(1L)).thenReturn(empresa);
         when(clienteRepository.findById(10L)).thenReturn(Optional.of(cliente));
         when(usuarioRepository.findById(2L)).thenReturn(Optional.of(agente));
+        when(categoriaTicketRepository.findByEmpresaIdAndNombre(eq(1L), anyString())).thenReturn(Optional.of(catSoftware));
+        when(configuracionSlaRepository.findByEmpresaIdAndPrioridad(eq(1L), eq(PrioridadTicket.CRITICA))).thenReturn(Optional.empty());
         when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> {
             Ticket t = inv.getArgument(0);
             t.setId(101L);
@@ -165,6 +190,7 @@ class TicketServiceTest {
     void testCerrarTicketConCsat() {
         when(ticketRepository.findById(100L)).thenReturn(Optional.of(ticket));
         when(ticketRepository.save(any(Ticket.class))).thenReturn(ticket);
+        when(encuestaCsatRepository.save(any(EncuestaCsat.class))).thenAnswer(i -> i.getArgument(0));
 
         ticketService.cerrarTicket(100L, true, "Caso solucionado", agente);
 
@@ -172,7 +198,7 @@ class TicketServiceTest {
         assertNotNull(ticket.getFechaResolucion());
         assertNotNull(ticket.getFechaCierre());
 
-        verify(encuestaRepository, times(1)).save(any(EncuestaSatisfaccion.class));
+        verify(encuestaCsatRepository, times(1)).save(any(EncuestaCsat.class));
         verify(historialRepository, times(1)).save(any(TicketHistorial.class));
         verify(healthScoreService, times(1)).recalcularYActualizarHealthScore(cliente);
     }

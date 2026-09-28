@@ -1,0 +1,230 @@
+# DOCUMENTO DE ARQUITECTURA Y GUÍA TÉCNICA PARA DESARROLLADORES
+# SERVICLIENT CRM HELPDESK v1.0.0
+
+================================================================================
+1. VISIÓN GENERAL DEL SISTEMA
+================================================================================
+
+ServiClient CRM Helpdesk es una plataforma web empresarial diseñada para la gestión
+integral de relaciones con clientes (CRM) y soporte post-venta (Helpdesk / Mesa de Ayuda)
+en organizaciones B2B (Business-to-Business) que prestan servicios recurrentes.
+
+Objetivos clave:
+- Centralizar la gestión de clientes corporativos y contratos de servicios.
+- Controlar el ciclo de vida de tickets de soporte con estricto seguimiento de acuerdos de nivel de servicio (SLA).
+- Medir la satisfacción del cliente (CSAT) y calcular automáticamente un indicador de salud global (Health Score).
+- Prevenir la fuga de clientes (Churn) identificando proactivamente contratos por vencer y cuentas en riesgo.
+
+================================================================================
+2. ARQUITECTURA DE SOFTWARE
+================================================================================
+
+2.1. Estilo Arquitectónico
+--------------------------
+- Patrón Arquitectónico: MVC por Capas (Model-View-Controller / N-Tier Architecture).
+- Modelo de Datos: Multitenancy Lógico basado en discriminador de empresa (`empresa_id` en todas las tablas transaccionales).
+- Renderizado: Server-Side Rendering (SSR) con Spring Boot + Thymeleaf.
+- Estilo de Comunicación: HTTP / REST + Formularios web con protección CSRF.
+- Documentación viva de APIs: OpenAPI 3.0 (Swagger UI).
+
+2.2. Diagrama de Capas
+----------------------
+  +-----------------------------------------------------------------------+
+  |                           CAPA DE PRESENTACIÓN                        |
+  |  - Vistas Thymeleaf (HTML5 / Bootstrap 5 / Vanilla JS / Chart.js)     |
+  |  - Swagger UI (/swagger-ui.html) & OpenAPI Endpoints (/v3/api-docs)   |
+  +-----------------------------------------------------------------------+
+                                     |
+                                     v
+  +-----------------------------------------------------------------------+
+  |                          CAPA DE CONTROLADORES                        |
+  |  - AuthController (Login, Logout, Wizard de Registro en 3 pasos)      |
+  |  - ClienteController (Listado, Alta, Vista 360°, Contactos)           |
+  |  - TicketController (Mesa de ayuda, Mensajes, SLAs, CSAT, Cierre)     |
+  |  - RenovacionController (Alertas de vencimiento, Seguimientos)        |
+  |  - GlobalControllerAdvice (@AuthenticationPrincipal, Menús activos)   |
+  +-----------------------------------------------------------------------+
+                                     |
+                                     v
+  +-----------------------------------------------------------------------+
+  |                      CAPA DE SEGURIDAD (Spring Security)              |
+  |  - SecurityConfig (BCrypt, CSRF, Rutas públicas vs protegidas)        |
+  |  - CustomUserDetailsService & CustomUserDetails (Autenticación DB)    |
+  +-----------------------------------------------------------------------+
+                                     |
+                                     v
+  +-----------------------------------------------------------------------+
+  |                        CAPA DE SERVICIOS / NEGOCIO                    |
+  |  - ClienteService (CRUD, KPIs 360°, conteos por estado de salud)      |
+  |  - TicketService (Ciclo de tickets, cálculo dinámico de SLA, CSAT)    |
+  |  - RenovacionService (Rango de alertas <15d, <30d, retención ARR)     |
+  |  - HealthScoreService (Motor de reglas y cálculo ponderado 0-100)     |
+  |  - EmpresaService & UsuarioService (Onboarding y gestión de agentes)  |
+  +-----------------------------------------------------------------------+
+                                     |
+                                     v
+  +-----------------------------------------------------------------------+
+  |                     CAPA DE ACCESO A DATOS (Spring Data JPA)          |
+  |  - 14 Interfaces Repository (Spring Data JPA / Hibernate ORM)         |
+  |  - Consultas derivadas por convención y consultas JPQL personalizadas |
+  +-----------------------------------------------------------------------+
+                                     |
+                                     v
+  +-----------------------------------------------------------------------+
+  |                      CAPA DE BASE DE DATOS Y PERSISTENCIA             |
+  |  - MySQL 8.x (Producción / Local) - 25 Tablas con Integridad FK       |
+  |  - H2 Database In-Memory (Pruebas Unitarias y de Integración)         |
+  |  - DataInitializer (Poblado automatizado de datos semilla)            |
+  +-----------------------------------------------------------------------+
+
+================================================================================
+3. ESTRUCTURA DE PAQUETES (src/main/java/com/serviclient/crm)
+================================================================================
+
+com.serviclient.crm
+├── config/
+│   ├── DataInitializer.java        # Inicialización de datos demo en las 25 tablas
+│   ├── OpenApiConfig.java          # Configuración global Swagger 3.0 / OpenAPI
+│   └── security/
+│       ├── CustomUserDetails.java  # Adaptador UserDetails con empresaId y rol
+│       ├── CustomUserDetailsService.java # Carga de usuario por email
+│       └── SecurityConfig.java     # Filtros HTTP, BCrypt, CSRF, rutas permitAll
+├── controller/
+│   ├── AuthController.java         # Login y Wizard @SessionAttributes
+│   ├── ClienteController.java      # Gestión de clientes y Vista 360°
+│   ├── GlobalControllerAdvice.java # Variables globales a vistas Thymeleaf
+│   ├── RenovacionController.java   # Panel de renovaciones y seguimientos
+│   └── TicketController.java       # Mesa de ayuda y gestión de tickets
+├── dto/
+│   ├── ClienteDto.java             # Formulario de alta de cliente
+│   ├── RegistroEmpresaDto.java     # Wizard de onboarding en 3 pasos
+│   └── TicketMensajeDto.java       # DTOs para mensajes, estados y seguimientos
+├── entity/
+│   ├── Cliente.java / Contacto.java / ClienteServicio.java
+│   ├── Empresa.java / RolEntity.java / Permiso.java / Usuario.java
+│   ├── Servicio.java / CategoriaTicketEntity.java
+│   ├── Ticket.java / TicketMensaje.java / TicketHistorial.java / TicketAdjunto.java
+│   ├── EncuestaSatisfaccion.java / Renovacion.java / RenovacionSeguimiento.java
+│   ├── Interaccion.java / HealthScoreHistorial.java
+│   ├── ConfiguracionSla.java / ConfiguracionCsat.java / ConfiguracionHealthScore.java
+│   └── enums/                      # Enumeraciones tipadas de dominio
+├── repository/                     # 14 Repositorios Spring Data JPA
+└── service/                        # Lógica transaccional de negocio
+
+================================================================================
+4. MÓDULOS DEL SISTEMA
+================================================================================
+
+4.1. Módulo de Autenticación y Onboarding de Empresa
+- Autenticación: Basada en formulario estándar con Spring Security + BCrypt (12 rondas).
+- Wizard de Registro (3 pasos en sesión):
+  * Paso 1: Información de la Empresa (Razón social, RUC, industria, país).
+  * Paso 2: Usuario Administrador Inicial (Nombre, email corporativo, contraseña).
+  * Paso 3: Parámetros del Sistema (Umbrales SLA en horas, escala CSAT, factores Health Score).
+- Aislamiento Multitenant: Cada transacción valida el `empresaId` del usuario autenticado.
+
+4.2. Módulo de Gestión de Clientes y Vista 360°
+- Listado Paginado: Filtros dinámicos por nombre comercial y estado de salud (`SALUDABLE`, `OBSERVACION`, `EN_RIESGO`).
+- Ficha 360° Integral (Tabs):
+  * Resumen: KPIs clave (Health Score, CSAT promedio, ARR, días para renovación).
+  * Factores de Riesgo: Desglose de penalizaciones detectadas por el motor de salud.
+  * Tickets: Historial de solicitudes de soporte asociadas al cliente.
+  * Contratos / Renovaciones: Fechas de vencimiento y montos pactados.
+  * Contactos: Directorio de tomadores de decisiones y técnicos asignados.
+  * Encuestas: Historial de respuestas CSAT con comentarios de clientes.
+
+4.3. Módulo Helpdesk / Mesa de Ayuda y Gestión de SLA
+- Ciclo de Vida del Ticket: `ABIERTO` -> `ASIGNADO` -> `EN_PROCESO` -> `PENDIENTE` -> `RESUELTO` -> `CERRADO`.
+- Motor de SLA Automatizado:
+  * Al crear un ticket, se consulta la tabla `configuracion_sla` según la prioridad (`BAJA`, `MEDIA`, `ALTA`, `CRITICA`).
+  * Se calculan los límites temporales exactos: `sla_respuesta_limite` y `sla_resolucion_limite`.
+  * Registro de primera respuesta (`primera_respuesta_cumplida`) y tiempo total de resolución.
+- Hilo de Conversación Unificado: Soporte para respuestas públicas y notas internas confidenciales.
+- Auditoría Integral: Cada cambio de agente, estado o prioridad genera un registro en `ticket_historial`.
+- Encuesta CSAT Automática: Al cerrar un ticket, el sistema puede generar un registro en `encuestas_satisfaccion`.
+
+4.4. Módulo de Renovaciones y Retención de Contratos
+- Detección Proactiva de Vencimientos: Clasificación por urgencia (<15 días, 16-30 días, 31-60 días).
+- Métricas en Tiempo Real: Conteo de contratos por vencer y monto total de ARR en riesgo.
+- Bitácora de Seguimientos: Registro de gestiones comerciales y cambio de estado (`EN_NEGOCIACION`, `RENOVADO`, `NO_RENOVADO`).
+
+4.5. Motor de Cálculo de Health Score
+El servicio `HealthScoreService` calcula un puntaje de 0 a 100 evaluando 4 pilares:
+1. Penalización por Tickets Críticos: Descuento por tickets abiertos con prioridad `CRITICA` o `ALTA`.
+2. Cumplimiento de SLA: Penalización si existen tickets que superaron el tiempo límite de resolución.
+3. Satisfacción del Cliente (CSAT): Calificación promedio de encuestas recibidas.
+4. Urgencia de Renovación: Impacto de contratos próximos a expirar sin seguimiento comercial.
+Clasificación resultante:
+- [80 - 100]: SALUDABLE (Verde)
+- [50 - 79]:  OBSERVACIÓN (Amarillo)
+- [0 - 49]:   EN RIESGO (Rojo)
+
+================================================================================
+5. STACK TECNOLÓGICO Y DEPENDENCIAS (pom.xml)
+================================================================================
+
+5.1. Tecnologías Base
+- Lenguaje: Java 21 (LTS).
+- Framework: Spring Boot 3.3.3.
+- Gestor de Construcción: Apache Maven 3.9+.
+
+5.2. Dependencias Principales
+| Dependencia                                    | Versión | Propósito                                        |
+|------------------------------------------------|---------|--------------------------------------------------|
+| `spring-boot-starter-web`                      | 3.3.3   | Servidor embebido Tomcat y arquitectura Spring MVC |
+| `spring-boot-starter-data-jpa`                 | 3.3.3   | Hibernate ORM 6.5 y persistencia JPA             |
+| `spring-boot-starter-thymeleaf`                | 3.3.3   | Motor de plantillas HTML5 para la interfaz web   |
+| `thymeleaf-extras-springsecurity6`             | 3.1.2   | Etiquetas de seguridad en vistas Thymeleaf       |
+| `spring-boot-starter-security`                 | 3.3.3   | Autenticación, autorización y filtros de sesión  |
+| `spring-boot-starter-validation`               | 3.3.3   | Hibernate Validator / Bean Validation (JSR-380)  |
+| `mysql-connector-j`                            | 8.3.0   | Driver JDBC para MySQL 8.x                       |
+| `h2`                                           | 2.2.x   | Base de datos en memoria para testing            |
+| `springdoc-openapi-starter-webmvc-ui`          | 2.6.0   | Generación Swagger UI y especificación OpenAPI 3 |
+| `lombok`                                       | 1.18.x  | Reducción de boilerplate (Getters/Setters/Log)   |
+| `spring-boot-devtools`                         | 3.3.3   | Recarga en caliente en entorno de desarrollo     |
+| `spring-boot-starter-test`                     | 3.3.3   | JUnit 5, Mockito, AssertJ                        |
+| `spring-security-test`                         | 6.3.3   | Utilidades de prueba con MockMvc y usuarios simulados |
+
+================================================================================
+6. CONFIGURACIÓN DE BASE DE DATOS Y PERFILES
+================================================================================
+
+6.1. Perfil MySQL (application-mysql.yml)
+- Driver: `com.mysql.cj.jdbc.Driver`
+- URL: `jdbc:mysql://localhost:3306/serviclient?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Lima&characterEncoding=UTF-8`
+- Usuario por defecto: `root`
+- Contraseña por defecto: `dcaldas$$` (configurable mediante variable `DB_PASSWORD`)
+- Dialecto JPA: `org.hibernate.dialect.MySQLDialect`
+- DDL Auto: `update`
+
+6.2. Perfil Default / Testing (application.yml)
+- Base de datos: H2 en memoria (`jdbc:h2:mem:serviclientdb`)
+- DDL Auto: `create-drop`
+
+================================================================================
+7. GUÍA RÁPIDA DE EJECUCIÓN Y COMANDOS MAVEN
+================================================================================
+
+7.1. Compilar el proyecto:
+  $ mvn clean compile -DskipTests
+
+7.2. Ejecutar la suite de pruebas automatizadas:
+  $ mvn clean test
+
+7.3. Levantar la aplicación con MySQL local:
+  $ mvn "-Dspring-boot.run.profiles=mysql" spring-boot:run
+
+7.4. Generar el sitio web Javadoc:
+  $ mvn javadoc:javadoc -DskipTests
+  Ubicación: target/site/apidocs/index.html
+
+7.5. Empaquetar Javadoc en archivo JAR o ZIP:
+  $ mvn javadoc:jar -DskipTests
+  Ubicación: target/crm-helpdesk-1.0.0-javadoc.jar
+  $ Compress-Archive -Path target\site\apidocs\* -DestinationPath target\javadoc-serviclient-crm.zip -Force
+
+7.6. Acceso a interfaces en el navegador:
+  * Aplicación Web: http://localhost:8080/
+  * Swagger UI:     http://localhost:8080/swagger-ui.html
+  * OpenAPI Spec:   http://localhost:8080/v3/api-docs
+  * Credenciales:   admin@serviclient.com / admin123

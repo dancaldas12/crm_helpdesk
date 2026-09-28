@@ -55,10 +55,10 @@ class HealthScoreServiceTest {
                 .id(10L)
                 .empresa(empresa)
                 .nombreComercial("NovaTech Solutions")
-                .fechaInicio(LocalDate.now().minusMonths(6))
-                .fechaRenovacion(LocalDate.now().plusDays(15))
-                .healthScore(80)
                 .build();
+        cliente.setFechaInicio(LocalDate.now().minusMonths(6));
+        cliente.setFechaRenovacion(LocalDate.now().plusDays(15));
+        cliente.setHealthScore(80);
     }
 
     @Test
@@ -74,7 +74,7 @@ class HealthScoreServiceTest {
 
         // 100 - (2*20=40) - 30 (CSAT < 3.0) - 15 (Renovacion <= 30 dias) = 15
         assertEquals(15, score);
-        assertEquals(EstadoCliente.EN_RIESGO, cliente.getEstado());
+        assertEquals(EstadoCliente.EN_RIESGO, cliente.getEstadoSalud());
     }
 
     @Test

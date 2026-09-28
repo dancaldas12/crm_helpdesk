@@ -11,7 +11,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "clientes")
+@Table(name = "clientes", uniqueConstraints = {
+    @UniqueConstraint(name = "uq_cliente_ruc_empresa", columnNames = {"empresa_id", "ruc"})
+}, indexes = {
+    @Index(name = "idx_clientes_empresa_estado", columnList = "empresa_id, estado")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -27,51 +31,59 @@ public class Cliente {
     @JoinColumn(name = "empresa_id", nullable = false)
     private Empresa empresa;
 
-    @Column(nullable = false, length = 150)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "responsable_id")
+    private Usuario responsable;
+
+    @Column(name = "nombre_comercial", nullable = false, length = 150)
     private String nombreComercial;
 
-    @Column(length = 200)
+    @Column(name = "razon_social", length = 200)
     private String razonSocial;
 
     @Column(length = 20)
     private String ruc;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "responsable_id")
-    private Usuario responsable;
+    @Column(length = 100)
+    private String industria;
 
-    @Column(nullable = false, length = 100)
-    private String servicioContratado;
+    @Column(name = "tamano_empresa", length = 50)
+    private String tamanoEmpresa;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
+    @Column(length = 100)
+    private String pais;
+
+    @Column(length = 100)
+    private String ciudad;
+
+    @Column(length = 255)
+    private String direccion;
+
+    @Column(name = "sitio_web", length = 255)
+    private String sitioWeb;
+
     @Builder.Default
-    private EstadoCliente estado = EstadoCliente.SALUDABLE;
+    @Column(nullable = false, length = 20)
+    private String estado = "ACTIVO";
 
-    @Builder.Default
-    @Column(nullable = false)
-    private Integer healthScore = 80;
-
-    @Builder.Default
-    @Column(nullable = false)
-    private Double csatPromedio = 4.5;
-
-    @Column(nullable = false)
-    private LocalDate fechaInicio;
-
-    @Column(nullable = false)
-    private LocalDate fechaRenovacion;
-
-    @Column(length = 500)
+    @Column(name = "logo_url", length = 500)
     private String logoUrl;
 
     @Builder.Default
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime fechaCreacion = LocalDateTime.now();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Builder.Default
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt = LocalDateTime.now();
 
     @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Contacto> contactos = new ArrayList<>();
+
+    @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ClienteServicio> servicios = new ArrayList<>();
 
     @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -81,28 +93,141 @@ public class Cliente {
     @Builder.Default
     private List<Renovacion> renovaciones = new ArrayList<>();
 
+    @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Interaccion> interacciones = new ArrayList<>();
+
+    @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("fechaCalculo DESC")
+    @Builder.Default
+    private List<HealthScoreHistorial> healthScoreHistorial = new ArrayList<>();
+
+    // Transient attributes / helper methods for view compatibility
+    @Builder.Default
+    @Transient
+    private Integer healthScoreTransient = 80;
+
+    @Builder.Default
+    @Transient
+    private Double csatPromedioTransient = 4.5;
+
+    @Transient
+    private String servicioContratadoTransient;
+
+    @Transient
+    private LocalDate fechaInicioTransient;
+
+    @Transient
+    private LocalDate fechaRenovacionTransient;
+
+    @Transient
+    private EstadoCliente estadoClienteTransient;
+
+    public Integer getHealthScore() {
+        if (healthScoreHistorial != null && !healthScoreHistorial.isEmpty()) {
+            return healthScoreHistorial.get(0).getPuntaje().intValue();
+        }
+        return healthScoreTransient != null ? healthScoreTransient : 80;
+    }
+
+    public void setHealthScore(Integer healthScore) {
+        this.healthScoreTransient = healthScore;
+    }
+
+    public EstadoCliente getEstadoSalud() {
+        if (estadoClienteTransient != null) return estadoClienteTransient;
+        int hs = getHealthScore();
+        if (hs >= 70) return EstadoCliente.SALUDABLE;
+        if (hs >= 50) return EstadoCliente.OBSERVACION;
+        return EstadoCliente.EN_RIESGO;
+    }
+
+    // Overload for compatibility with views accessing cliente.estado
+    public EstadoCliente getEstadoEnum() {
+        return getEstadoSalud();
+    }
+
+    public void setEstado(EstadoCliente estadoCliente) {
+        this.estadoClienteTransient = estadoCliente;
+        if (estadoCliente != null) {
+            this.estado = "ACTIVO";
+        }
+    }
+
+    public void setEstado(String estadoStr) {
+        this.estado = estadoStr;
+    }
+
+    public Double getCsatPromedio() {
+        return csatPromedioTransient != null ? csatPromedioTransient : 4.5;
+    }
+
+    public void setCsatPromedio(Double csat) {
+        this.csatPromedioTransient = csat;
+    }
+
+    public String getServicioContratado() {
+        if (servicioContratadoTransient != null) return servicioContratadoTransient;
+        if (servicios != null && !servicios.isEmpty()) {
+            return servicios.get(0).getServicio() != null ? servicios.get(0).getServicio().getNombre() : "SaaS Solution";
+        }
+        return "SaaS Enterprise";
+    }
+
+    public void setServicioContratado(String s) {
+        this.servicioContratadoTransient = s;
+    }
+
+    public LocalDate getFechaInicio() {
+        if (fechaInicioTransient != null) return fechaInicioTransient;
+        if (servicios != null && !servicios.isEmpty()) {
+            return servicios.get(0).getFechaInicio();
+        }
+        return LocalDate.now().minusMonths(6);
+    }
+
+    public void setFechaInicio(LocalDate fi) {
+        this.fechaInicioTransient = fi;
+    }
+
+    public LocalDate getFechaRenovacion() {
+        if (fechaRenovacionTransient != null) return fechaRenovacionTransient;
+        if (renovaciones != null && !renovaciones.isEmpty()) {
+            return renovaciones.get(0).getFechaVencimiento();
+        }
+        if (servicios != null && !servicios.isEmpty() && servicios.get(0).getFechaFin() != null) {
+            return servicios.get(0).getFechaFin();
+        }
+        return LocalDate.now().plusMonths(6);
+    }
+
+    public void setFechaRenovacion(LocalDate fr) {
+        this.fechaRenovacionTransient = fr;
+    }
+
     public long getDiasParaRenovacion() {
-        if (fechaRenovacion == null) return 0;
-        long dias = ChronoUnit.DAYS.between(LocalDate.now(), fechaRenovacion);
-        return dias;
+        LocalDate fr = getFechaRenovacion();
+        if (fr == null) return 0;
+        return ChronoUnit.DAYS.between(LocalDate.now(), fr);
     }
 
     public int getCsatPorcentaje() {
-        if (csatPromedio == null || csatPromedio <= 0) return 0;
-        return (int) Math.round((csatPromedio / 5.0) * 100);
+        Double csat = getCsatPromedio();
+        if (csat == null || csat <= 0) return 0;
+        return (int) Math.round((csat / 5.0) * 100);
     }
 
     public String getHealthScoreColorClass() {
-        if (healthScore == null) return "bg-slate-400";
-        if (healthScore >= 70) return "bg-emerald-500";
-        if (healthScore >= 50) return "bg-amber-500";
+        int hs = getHealthScore();
+        if (hs >= 70) return "bg-emerald-500";
+        if (hs >= 50) return "bg-amber-500";
         return "bg-rose-500";
     }
 
     public String getHealthScoreTextColorClass() {
-        if (healthScore == null) return "text-slate-600";
-        if (healthScore >= 70) return "text-emerald-600";
-        if (healthScore >= 50) return "text-amber-600";
+        int hs = getHealthScore();
+        if (hs >= 70) return "text-emerald-600";
+        if (hs >= 50) return "text-amber-600";
         return "text-rose-600";
     }
 
@@ -114,10 +239,26 @@ public class Cliente {
                 .orElse(contactos.get(0));
     }
 
+    public LocalDateTime getFechaCreacion() {
+        return createdAt;
+    }
+
+    public void setFechaCreacion(LocalDateTime fechaCreacion) {
+        this.createdAt = fechaCreacion;
+    }
+
     @PrePersist
     public void prePersist() {
-        if (this.fechaCreacion == null) {
-            this.fechaCreacion = LocalDateTime.now();
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
         }
+        if (this.updatedAt == null) {
+            this.updatedAt = LocalDateTime.now();
+        }
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 }

@@ -1,261 +1,331 @@
-# ServiClient CRM Helpdesk
+﻿# ServiClient CRM Helpdesk
 
-> Aplicación web monolítica de gestión de clientes, mesa de ayuda y renovaciones, desarrollada con **Java 21 + Spring Boot 3 + Thymeleaf + Spring Security + Spring Data JPA**.
+> Aplicacion web monolitica de gestion de clientes, mesa de ayuda y renovaciones.
+> **Java 21 · Spring Boot 3.3.3 · Thymeleaf · Spring Security · Spring Data JPA · MySQL 8**
+
+[![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://adoptium.net/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.3-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0%2B-blue.svg)](https://www.mysql.com/)
+[![Swagger](https://img.shields.io/badge/Swagger-OpenAPI%203.0-85EA2D.svg)](http://localhost:8080/swagger-ui.html)
+[![License](https://img.shields.io/badge/License-MIT%20Academico-lightgrey.svg)](#-licencia)
 
 ---
 
-## 📋 Descripción
+## Descripcion
 
-**ServiClient** es un CRM académico orientado a empresas de servicios B2B. Permite gestionar el ciclo de vida del cliente: desde el registro de la empresa y onboarding, hasta el seguimiento de tickets de soporte, control de SLA, encuestas de satisfacción (CSAT) y gestión de renovaciones de contratos.
+**ServiClient** es un CRM academico orientado a empresas de servicios B2B. Permite gestionar el ciclo de vida del cliente: desde el registro de empresa y onboarding, hasta el seguimiento de tickets de soporte, control de SLA, encuestas de satisfaccion (CSAT) y gestion de renovaciones de contratos.
 
-### Módulos principales
+### Modulos principales
 
-| Módulo | Descripción |
+| Modulo | Descripcion |
 |---|---|
-| 🔐 Autenticación | Login + Wizard de registro en 3 pasos (Empresa → Admin → Configuración) |
-| 👥 Clientes | Listado con Health Score, filtros y Vista 360° por tabs |
-| 🎫 Helpdesk | Mesa de ayuda con KPIs, conversación, notas internas y control de SLA |
-| 🔄 Renovaciones | Panel por rangos de vencimiento, alertas de riesgo y seguimientos |
-| 📊 Health Score | Motor de cálculo automático (0–100) basado en CSAT, SLA y renovación |
+| Autenticacion | Login + Wizard de registro en 3 pasos (Empresa -> Admin -> Configuracion) |
+| Clientes | Listado paginado con Health Score, filtros y Vista 360 por tabs |
+| Helpdesk | Mesa de ayuda con KPIs, conversacion, notas internas y control de SLA |
+| Renovaciones | Panel por rangos de vencimiento, alertas de riesgo y seguimientos |
+| Health Score | Motor de calculo automatico (0-100) basado en CSAT, SLA y renovacion |
+| Swagger UI | Documentacion interactiva de la API en /swagger-ui.html |
 
 ---
 
-## 🛠 Stack Tecnológico
+## Stack Tecnologico
 
-| Capa | Tecnología |
-|---|---|
-| Lenguaje | Java 21 |
-| Framework | Spring Boot 3.3.3 |
-| Vista | Thymeleaf 3.1 |
-| Persistencia | Spring Data JPA + Hibernate 6 |
-| Seguridad | Spring Security 6 |
-| BD Desarrollo | H2 in-memory (compatible MySQL) |
-| BD Producción | MySQL 8+ |
-| Build | Apache Maven 3.9+ |
-| Utilidades | Lombok |
+| Capa | Tecnologia | Version |
+|---|---|---|
+| Lenguaje | Java | 21 |
+| Framework | Spring Boot | 3.3.3 |
+| Vista | Thymeleaf | 3.1 |
+| Persistencia | Spring Data JPA + Hibernate | 6 |
+| Seguridad | Spring Security | 6 |
+| Base de Datos | MySQL | 8.0+ |
+| BD alternativa | H2 in-memory | - |
+| Build | Apache Maven | 3.9+ |
+| Utilidades | Lombok | - |
+| Documentacion API | SpringDoc OpenAPI (Swagger) | 2.6.0 |
 
 ---
 
-## 🏗 Arquitectura
+## Arquitectura
 
-Monolito en capas estrictas, sin microservicios ni frameworks de arquitectura adicionales:
+Monolito en capas estrictas:
 
 ```
 com.serviclient.crm
-├── config/
-│   ├── DataInitializer.java          ← Datos demo al arrancar
-│   └── security/
-│       ├── SecurityConfig.java
-│       ├── CustomUserDetails.java
-│       └── CustomUserDetailsService.java
-├── controller/                        ← Spring MVC (@Controller)
-│   ├── AuthController.java
-│   ├── ClienteController.java
-│   ├── TicketController.java
-│   ├── RenovacionController.java
-│   └── GlobalControllerAdvice.java
-├── service/                           ← Lógica de negocio (@Service)
-│   ├── EmpresaService.java
-│   ├── UsuarioService.java
-│   ├── ClienteService.java
-│   ├── HealthScoreService.java
-│   ├── TicketService.java
-│   └── RenovacionService.java
-├── repository/                        ← Spring Data JPA (@Repository)
-├── entity/                            ← Entidades JPA (@Entity)
-│   └── enums/
-├── dto/                               ← Objetos de transferencia de datos
-└── ServiClientApplication.java
-```
-
-### Flujo de una petición
-
-```
-Browser → Controller → Service → Repository → H2 / MySQL
-                   ↑
-           Thymeleaf (vista)
++-- config/
+|   +-- DataInitializer.java          <- Datos demo en las 25 tablas al arrancar
+|   +-- OpenApiConfig.java            <- Configuracion Swagger / OpenAPI 3.0
+|   +-- security/
+|       +-- SecurityConfig.java
+|       +-- CustomUserDetails.java
+|       +-- CustomUserDetailsService.java
++-- controller/                        <- Spring MVC (@Controller)
+|   +-- AuthController.java
+|   +-- ClienteController.java
+|   +-- TicketController.java
+|   +-- RenovacionController.java
+|   +-- GlobalControllerAdvice.java
++-- service/                           <- Logica de negocio (@Service)
+|   +-- EmpresaService.java
+|   +-- UsuarioService.java
+|   +-- ClienteService.java
+|   +-- HealthScoreService.java
+|   +-- TicketService.java
+|   +-- RenovacionService.java
++-- repository/                        <- Spring Data JPA (25 repositorios)
++-- entity/                            <- Entidades JPA (25 entidades)
+|   +-- enums/                         <- 15 enumeraciones de dominio
++-- ServiClientApplication.java
 ```
 
 ---
 
-## ⚙️ Requisitos Previos
+## Base de Datos (MySQL)
 
-- **Java 21** — [Microsoft OpenJDK 21](https://learn.microsoft.com/es-es/java/openjdk/download) o cualquier distribución JDK 21+
-- **Apache Maven 3.9+** — [Descargar](https://maven.apache.org/download.cgi)
-- **MySQL 8+** *(solo para perfil de producción — en desarrollo usa H2)*
+El proyecto usa **MySQL 8** como base de datos principal (esquema `serviclient`).
+El esquema completo esta en `CRM_MESA_AYUDA.sql` e incluye **25 tablas**.
+
+### Tablas del esquema
+
+| # | Tabla | Entidad JPA | Descripcion |
+|---|---|---|---|
+| 1 | empresas | Empresa | Empresa proveedora del CRM |
+| 2 | roles | RolEntity | Roles personalizables por empresa |
+| 3 | permisos | Permiso | Permisos granulares por modulo/accion |
+| 4 | rol_permisos | (tabla join) | Relacion N:M entre roles y permisos |
+| 5 | usuarios | Usuario | Agentes y administradores |
+| 6 | servicios | Servicio | Catalogo de productos/servicios |
+| 7 | clientes | Cliente | Clientes B2B con Health Score |
+| 8 | contactos | Contacto | Contactos por cliente |
+| 9 | clientes_servicios | ClienteServicio | Contratos activos de servicios |
+| 10 | categorias_tickets | CategoriaTicketEntity | Categorias de tickets por empresa |
+| 11 | configuracion_sla | ConfiguracionSla | Tiempos de SLA por prioridad |
+| 12 | configuracion_csat | ConfiguracionCsat | Escala y mensaje CSAT |
+| 13 | configuracion_health_score | ConfiguracionHealthScore | Pesos y rangos del Health Score |
+| 14 | tickets | Ticket | Tickets de soporte (Mesa de ayuda) |
+| 15 | ticket_mensajes | TicketMensaje | Conversacion del ticket |
+| 16 | ticket_historial | TicketHistorial | Log de eventos del ticket |
+| 17 | ticket_adjuntos | TicketAdjunto | Archivos adjuntos |
+| 18 | renovaciones | Renovacion | Renovaciones de contrato |
+| 19 | renovacion_seguimientos | RenovacionSeguimiento | Historial de seguimientos |
+| 20 | encuestas_csat | EncuestaCsat | Encuestas CSAT enviadas |
+| 21 | respuestas_csat | RespuestaCsat | Respuestas a encuestas CSAT |
+| 22 | encuestas_satisfaccion | EncuestaSatisfaccion | Satisfaccion por ticket |
+| 23 | health_score_historial | HealthScoreHistorial | Historico de puntaje de salud |
+| 24 | interacciones | Interaccion | Reuniones, llamadas y seguimientos |
+| 25 | auditoria | Auditoria | Log de acciones del sistema |
+
+### Configuracion de conexion
+
+```yaml
+# application-mysql.yml (valores por defecto)
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/serviclient?createDatabaseIfNotExist=true
+    username: root
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+```
+
+Variables de entorno: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
 
 ---
 
-## 🚀 Ejecución Rápida (Desarrollo con H2)
+## Requisitos Previos
 
-```bash
-# Clonar o ubicarse en el directorio del proyecto
-cd crm_helpdesk
+| Herramienta | Version minima | Descarga |
+|---|---|---|
+| Java JDK | 21 | https://learn.microsoft.com/es-es/java/openjdk/download |
+| Apache Maven | 3.9+ | https://maven.apache.org/download.cgi |
+| MySQL Server | 8.0+ | https://dev.mysql.com/downloads/mysql/ |
 
-# Ejecutar con perfil dev (H2 in-memory, no requiere MySQL)
-mvn spring-boot:run
+---
+
+## Ejecucion
+
+### Opcion 1 - Script rapido (Windows)
+
+```bat
+iniciar.bat
 ```
 
-La aplicación estará disponible en: **http://localhost:8080**
-
-### En Windows (si Maven no está en el PATH global)
+### Opcion 2 - Maven directo
 
 ```powershell
-$env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-21.0.12.101-hotspot"
-$env:PATH = "$env:JAVA_HOME\bin;C:\Users\DANNY\apache-maven-3.9.9\bin;$env:PATH"
-mvn spring-boot:run
-```
-
----
-
-## 🗄️ Base de Datos
-
-### Perfil `dev` (por defecto)
-
-Usa **H2 in-memory** con modo de compatibilidad MySQL. La base de datos se recrea automáticamente en cada arranque.
-
-- **H2 Console**: http://localhost:8080/h2-console
-  - JDBC URL: `jdbc:h2:mem:crm_helpdesk_db`
-  - Usuario: `SA` | Contraseña: *(vacío)*
-
-### Perfil `mysql` (producción / local con MySQL)
-
-1. Crear la base de datos en MySQL:
-
-```sql
-CREATE DATABASE crm_helpdesk CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-2. Editar `src/main/resources/application-mysql.yml` con tus credenciales.
-
-3. Ejecutar con el perfil activo:
-
-```bash
 mvn spring-boot:run -Dspring-boot.run.profiles=mysql
 ```
 
----
-
-## 🔑 Credenciales Demo
-
-Al arrancar en perfil `dev`, el `DataInitializer` carga datos de demostración automáticamente.
-
-| Email | Contraseña | Rol |
-|---|---|---|
-| `admin@serviclient.com` | `admin123` | Administrador |
-
----
-
-## 🗺 Endpoints Disponibles
-
-| Ruta | Descripción |
-|---|---|
-| `GET /login` | Pantalla de inicio de sesión |
-| `GET /registro/paso-1` | Wizard Paso 1 — Datos de Empresa |
-| `GET /registro/paso-2` | Wizard Paso 2 — Usuario Administrador |
-| `GET /registro/paso-3` | Wizard Paso 3 — Configuración SLA/CSAT/Health Score |
-| `GET /clientes` | Listado de clientes con Health Score |
-| `GET /clientes/{id}` | Vista 360° del cliente |
-| `GET /clientes/nuevo` | Formulario de nuevo cliente |
-| `POST /clientes/{id}/contactos` | Agregar contacto al cliente |
-| `GET /tickets` | Mesa de Ayuda — listado con KPIs |
-| `GET /tickets/{id}` | Detalle de ticket con conversación y SLA |
-| `GET /tickets/nuevo` | Formulario de nuevo ticket |
-| `POST /tickets/{id}/mensajes` | Enviar mensaje o nota interna |
-| `POST /tickets/{id}/asignar` | Reasignar agente |
-| `POST /tickets/{id}/cambiar-estado` | Cambiar estado/prioridad |
-| `POST /tickets/{id}/cerrar` | Cerrar ticket (dispara CSAT) |
-| `GET /renovaciones` | Panel de renovaciones con alertas |
-| `POST /renovaciones/seguimiento` | Registrar seguimiento de renovación |
-
----
-
-## 🧪 Pruebas
+### Opcion 3 - JAR empaquetado
 
 ```bash
-# Ejecutar toda la suite de pruebas
+mvn clean package -DskipTests
+java -jar target/crm-helpdesk-1.0.0.jar --spring.profiles.active=mysql
+```
+
+La aplicacion estara disponible en **http://localhost:8080**
+
+> **Primer arranque:** El `DataInitializer` detecta que la BD esta vacia y carga
+> automaticamente datos de demostracion en las 25 tablas.
+
+---
+
+## Credenciales Demo
+
+| Email | Contrasena | Rol |
+|---|---|---|
+| admin@serviclient.com | admin123 | Administrador |
+| carlos.ruiz@serviclient.com | admin123 | Agente de Soporte |
+| ana.garcia@serviclient.com | admin123 | Agente de Soporte |
+| laura.mendoza@serviclient.com | admin123 | Supervisor Customer Success |
+
+---
+
+## Documentacion API (Swagger / OpenAPI)
+
+Con la aplicacion corriendo, accede a:
+
+| URL | Descripcion |
+|---|---|
+| http://localhost:8080/swagger-ui.html | **Swagger UI interactivo** |
+| http://localhost:8080/v3/api-docs | Spec OpenAPI 3.0 en JSON |
+| http://localhost:8080/v3/api-docs.yaml | Spec OpenAPI 3.0 en YAML |
+
+### Tags documentados
+
+| Tag | Rutas cubiertas |
+|---|---|
+| Autenticacion | /login, /registro/paso-{1,2,3} |
+| Clientes | /clientes/** |
+| Helpdesk / Tickets | /tickets/** |
+| Renovaciones | /renovaciones/** |
+
+> **Nota:** Para probar endpoints protegidos desde Swagger UI, inicia sesion en /login
+> en la misma pestaña del navegador. La cookie JSESSIONID se comparte automaticamente.
+
+---
+
+## Javadoc
+
+El codigo fuente incluye Javadoc completo en:
+
+- **Controllers**: descripcion de clase, rutas, parametros, retornos y excepciones
+- **Services**: descripcion de la logica de negocio y sus invariantes
+- **Entities**: descripcion de campos JPA y relaciones
+- **Configuracion**: OpenApiConfig, SecurityConfig, DataInitializer
+
+Para generar el sitio HTML de Javadoc:
+
+```bash
+mvn javadoc:javadoc
+# Resultado en: target/site/apidocs/index.html
+```
+
+---
+
+## Endpoints Disponibles
+
+| Metodo | Ruta | Descripcion |
+|---|---|---|
+| GET | / | Redireccion a /clientes |
+| GET | /login | Pantalla de inicio de sesion |
+| POST | /login | Procesar login (Spring Security) |
+| GET | /registro/paso-1 | Wizard - Datos de Empresa |
+| POST | /registro/paso-1 | Validar y avanzar al paso 2 |
+| GET | /registro/paso-2 | Wizard - Usuario Administrador |
+| POST | /registro/paso-2 | Validar y avanzar al paso 3 |
+| GET | /registro/paso-3 | Wizard - Configuracion SLA/CSAT/Health Score |
+| POST | /registro/paso-3 | Persistir empresa completa |
+| GET | /clientes | Listado paginado de clientes |
+| GET | /clientes/nuevo | Formulario de nuevo cliente |
+| POST | /clientes | Crear cliente |
+| GET | /clientes/{id} | Vista 360 del cliente |
+| POST | /clientes/{id}/contactos | Agregar contacto al cliente |
+| GET | /tickets | Mesa de Ayuda - listado con KPIs |
+| GET | /tickets/nuevo | Formulario de nuevo ticket |
+| POST | /tickets | Crear ticket |
+| GET | /tickets/{id} | Detalle de ticket (conversacion + SLA) |
+| POST | /tickets/{id}/mensajes | Enviar mensaje o nota interna |
+| POST | /tickets/{id}/asignar | Reasignar agente |
+| POST | /tickets/{id}/cambiar-estado | Cambiar estado y/o prioridad |
+| POST | /tickets/{id}/cerrar | Cerrar ticket (dispara CSAT) |
+| GET | /renovaciones | Panel de renovaciones con alertas |
+| POST | /renovaciones/seguimiento | Registrar seguimiento de renovacion |
+| GET | /swagger-ui.html | Documentacion Swagger UI |
+| GET | /v3/api-docs | Spec OpenAPI JSON |
+
+---
+
+## Pruebas
+
+```bash
 mvn clean test
 ```
 
-Resultado esperado: **20 tests — 0 fallos — 0 errores**
-
-| Clase de Test | Tipo | Pruebas |
+| Clase de Test | Tipo | Cobertura |
 |---|---|---|
-| `ServiClientApplicationTests` | Integración | Contexto Spring Boot + DataInitializer |
-| `SecurityAndAuthControllerTest` | Integración (MockMvc) | Login, Wizard 3 pasos, autorización por roles |
-| `JpaRepositoriesTest` | Persistencia (`@DataJpaTest`) | Repositorios, filtros JPA, ordenamientos y agregaciones |
-| `HealthScoreServiceTest` | Unitario (Mockito) | Cálculo de puntaje y factores de riesgo |
-| `TicketServiceTest` | Unitario (Mockito) | SLA, mensajería, notas internas, cierre con CSAT y auditoría |
+| ServiClientApplicationTests | Integracion | Contexto Spring Boot + DataInitializer |
+| SecurityAndAuthControllerTest | MockMvc | Login, Wizard 3 pasos, autorizacion |
+| JpaRepositoriesTest | @DataJpaTest | Repositorios, filtros JPA, consultas |
+| HealthScoreServiceTest | Unitario (Mockito) | Calculo de puntaje y factores de riesgo |
+| TicketServiceTest | Unitario (Mockito) | SLA, mensajeria, cierre con CSAT y auditoria |
 
 ---
 
-## 🧩 Modelo de Dominio
+## Modelo de Dominio
 
 ```
-Empresa ──< Usuario (Rol: ADMIN | AGENTE)
-Empresa ──< Cliente ──< Contacto
-Cliente ──< Ticket ──< TicketMensaje
-                    └─< TicketHistorial
-                    └── EncuestaSatisfaccion
-Cliente ──< Renovacion ──< RenovacionSeguimiento
+Empresa --< RolEntity --< Permiso (N:M via rol_permisos)
+Empresa --< Usuario (rol_id -> RolEntity)
+Empresa --< Cliente --< Contacto
+                   --< ClienteServicio --> Servicio
+                   --< Ticket --< TicketMensaje
+                              --< TicketHistorial
+                              --< TicketAdjunto
+                              --- EncuestaCsat --< RespuestaCsat
+                   --< Renovacion --< RenovacionSeguimiento
+                   --< Interaccion
+                   --< HealthScoreHistorial
+Empresa --< CategoriaTicketEntity
+Empresa --< ConfiguracionSla
+Empresa --< ConfiguracionCsat
+Empresa --< ConfiguracionHealthScore
+Empresa --< Auditoria
+Empresa --< Notificacion
 ```
 
-### Enums del dominio
+### Enums del dominio (15 enumeraciones)
 
 | Enum | Valores |
 |---|---|
-| `Rol` | `ADMIN`, `AGENTE` |
-| `EstadoCliente` | `SALUDABLE`, `OBSERVACION`, `EN_RIESGO` |
-| `EstadoTicket` | `ABIERTO`, `EN_PROCESO`, `PENDIENTE`, `RESUELTO`, `CERRADO` |
-| `PrioridadTicket` | `BAJA`, `MEDIA`, `ALTA`, `CRITICA` |
-| `CategoriaTicket` | `INFRAESTRUCTURA`, `SOFTWARE`, `FACTURACION`, `ADMINISTRACION`, `SOPORTE_TECNICO` |
-| `EstadoRenovacion` | `PENDIENTE`, `EN_NEGOCIACION`, `RENOVADO`, `NO_REALIZADO` |
+| Rol | ADMIN, AGENTE, SUPERVISOR |
+| EstadoCliente | SALUDABLE, OBSERVACION, EN_RIESGO |
+| EstadoSaludCliente | SALUDABLE, EN_OBSERVACION, EN_RIESGO, CRITICO |
+| EstadoTicket | ABIERTO, EN_PROCESO, PENDIENTE, RESUELTO, CERRADO |
+| PrioridadTicket | BAJA, MEDIA, ALTA, CRITICA |
+| CategoriaTicket | INFRAESTRUCTURA, SOFTWARE, FACTURACION, ADMINISTRACION, SOPORTE_TECNICO |
+| EstadoRenovacion | PENDIENTE, EN_NEGOCIACION, RENOVADO, NO_RENOVADO, CANCELADO |
+| EstadoEncuestaCsat | PENDIENTE, ENVIADA, RESPONDIDA, VENCIDA |
+| EstadoServicioCliente | ACTIVO, INACTIVO, SUSPENDIDO, CANCELADO |
+| EstadoGeneral | ACTIVO, INACTIVO |
+| TipoMensajeTicket | CLIENTE, AGENTE, NOTA_INTERNA, SISTEMA |
+| TipoInteraccion | LLAMADA, EMAIL, REUNION, SEGUIMIENTO, OTRO |
+| TipoNotificacion | TICKET_ASIGNADO, TICKET_VENCIDO, RENOVACION_PROXIMA, CLIENTE_EN_RIESGO, CSAT_RECIBIDO |
+| CanalOrigen | PORTAL_WEB, EMAIL, TELEFONO, CHAT, API |
+| AccionAuditoria | LOGIN, LOGOUT, CREAR, EDITAR, ELIMINAR, VER |
 
 ---
 
-## 📁 Estructura del Proyecto
+## Principios Aplicados
 
-```
-crm_helpdesk/
-├── pom.xml
-├── README.md
-├── prototipo/                         ← Diseños de referencia visual
-│   ├── login/
-│   ├── clientes/
-│   ├── cliente360/
-│   ├── helpdesk/
-│   └── renovaciones/
-└── src/
-    ├── main/
-    │   ├── java/com/serviclient/crm/
-    │   └── resources/
-    │       ├── application.yml        ← Perfil dev activo por defecto
-    │       ├── application-dev.yml    ← H2 in-memory
-    │       ├── application-mysql.yml  ← MySQL 8
-    │       ├── static/
-    │       │   ├── css/styles.css
-    │       │   └── js/app.js
-    │       └── templates/
-    │           ├── layout/base.html
-    │           ├── auth/
-    │           ├── clientes/
-    │           ├── helpdesk/
-    │           └── renovaciones/
-    └── test/
-        └── java/com/serviclient/crm/
-```
+- **SOLID** - Separacion clara de responsabilidades por capa
+- **DRY** - Layout maestro Thymeleaf reutilizable en todas las vistas
+- **Javadoc** - Documentacion en codigo para controllers, services y configuracion
+- **OpenAPI 3.0** - Swagger UI auto-generado desde las anotaciones del codigo
+- **Seguridad** - CSRF habilitado, contrasenas con BCrypt, rutas protegidas por rol
 
 ---
 
-## 📐 Principios Aplicados
+## Licencia
 
-- **SOLID** — Separación clara de responsabilidades por capa
-- **DRY** — Layout maestro Thymeleaf reutilizable en todas las vistas
-- **Simplicidad académica** — Sin microservicios, Clean Architecture ni dependencias innecesarias
-- **Seguridad** — CSRF habilitado, contraseñas con BCrypt, rutas protegidas por rol
-
----
-
-## 📄 Licencia
-
-Proyecto académico — Libre uso educativo.
+Proyecto academico - Libre uso educativo (MIT).

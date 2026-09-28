@@ -8,7 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "empresas")
+@Table(name = "empresas", uniqueConstraints = {
+    @UniqueConstraint(name = "uq_empresa_ruc", columnNames = {"ruc"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,17 +22,20 @@ public class Empresa {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 150)
+    @Column(name = "nombre_comercial", nullable = false, length = 150)
     private String nombreComercial;
 
-    @Column(nullable = false, length = 200)
+    @Column(name = "razon_social", nullable = false, length = 200)
     private String razonSocial;
 
-    @Column(length = 20)
+    @Column(nullable = false, length = 20)
     private String ruc;
 
     @Column(length = 100)
     private String industria;
+
+    @Column(name = "tamano_empresa", length = 50)
+    private String tamanoEmpresa;
 
     @Column(length = 100)
     private String pais;
@@ -41,43 +46,58 @@ public class Empresa {
     @Column(length = 255)
     private String direccion;
 
-    @Column(length = 500)
+    @Column(name = "sitio_web", length = 255)
+    private String sitioWeb;
+
+    @Column(name = "logo_url", length = 500)
     private String logoUrl;
 
-    // Configuración Inicial SLA
     @Builder.Default
-    @Column(nullable = false)
-    private Integer slaPrimerRespuestaHoras = 2;
-
-    @Builder.Default
-    @Column(nullable = false)
-    private Integer slaResolucionHoras = 24;
-
-    // Configuración Inicial CSAT
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean activarCsat = true;
+    @Column(name = "zona_horaria", length = 100)
+    private String zonaHoraria = "America/Lima";
 
     @Builder.Default
     @Column(nullable = false, length = 20)
+    private String estado = "ACTIVA";
+
+    // Configuración Inicial SLA (helper / backwards compatibility)
+    @Builder.Default
+    @Transient
+    private Integer slaPrimerRespuestaHoras = 2;
+
+    @Builder.Default
+    @Transient
+    private Integer slaResolucionHoras = 24;
+
+    // Configuración Inicial CSAT (helper / backwards compatibility)
+    @Builder.Default
+    @Transient
+    private Boolean activarCsat = true;
+
+    @Builder.Default
+    @Transient
     private String escalaCsat = "1 a 5";
 
-    // Configuración Factores Health Score
+    // Configuración Factores Health Score (helper / backwards compatibility)
     @Builder.Default
-    @Column(nullable = false)
+    @Transient
     private Boolean factorTicketsCriticos = true;
 
     @Builder.Default
-    @Column(nullable = false)
+    @Transient
     private Boolean factorCsat = true;
 
     @Builder.Default
-    @Column(nullable = false)
+    @Transient
     private Boolean factorRenovacionProxima = true;
 
     @Builder.Default
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime fechaCreacion = LocalDateTime.now();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Builder.Default
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt = LocalDateTime.now();
 
     @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -87,10 +107,38 @@ public class Empresa {
     @Builder.Default
     private List<Cliente> clientes = new ArrayList<>();
 
+    @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<RolEntity> roles = new ArrayList<>();
+
+    @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Servicio> servicios = new ArrayList<>();
+
+    @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<CategoriaTicketEntity> categorias = new ArrayList<>();
+
+    public LocalDateTime getFechaCreacion() {
+        return createdAt;
+    }
+
+    public void setFechaCreacion(LocalDateTime fechaCreacion) {
+        this.createdAt = fechaCreacion;
+    }
+
     @PrePersist
     public void prePersist() {
-        if (this.fechaCreacion == null) {
-            this.fechaCreacion = LocalDateTime.now();
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
         }
+        if (this.updatedAt == null) {
+            this.updatedAt = LocalDateTime.now();
+        }
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 }

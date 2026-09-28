@@ -4,6 +4,7 @@ public enum EstadoRenovacion {
     PENDIENTE("Pendiente", "badge-renovacion-pendiente"),
     EN_NEGOCIACION("En negociación", "badge-renovacion-negociacion"),
     RENOVADO("Renovado", "badge-renovacion-renovado"),
+    NO_RENOVADO("No renovado", "badge-renovacion-norealizada"),
     NO_REALIZADO("No realizada", "badge-renovacion-norealizada");
 
     private final String etiqueta;

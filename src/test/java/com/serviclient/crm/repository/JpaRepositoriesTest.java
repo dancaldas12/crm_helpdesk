@@ -46,8 +46,12 @@ class JpaRepositoriesTest {
     private RenovacionRepository renovacionRepository;
 
     private Empresa empresa;
+    private RolEntity rolAdmin;
     private Usuario admin;
     private Cliente cliente;
+    private Servicio servicio;
+    private ClienteServicio clienteServicio;
+    private CategoriaTicketEntity catInfra;
 
     @BeforeEach
     void setUp() {
@@ -58,23 +62,26 @@ class JpaRepositoriesTest {
                 .industria("Tecnología")
                 .pais("Perú")
                 .ciudad("Lima")
-                .slaPrimerRespuestaHoras(2)
-                .slaResolucionHoras(24)
-                .activarCsat(true)
-                .factorTicketsCriticos(true)
-                .factorCsat(true)
-                .factorRenovacionProxima(true)
+                .estado("ACTIVA")
                 .build();
         empresa = entityManager.persistAndFlush(empresa);
 
+        rolAdmin = RolEntity.builder()
+                .empresa(empresa)
+                .nombre("Administrador")
+                .descripcion("Admin rol")
+                .estado("ACTIVO")
+                .build();
+        rolAdmin = entityManager.persistAndFlush(rolAdmin);
+
         admin = Usuario.builder()
                 .empresa(empresa)
+                .rolEntity(rolAdmin)
                 .nombre("Admin")
                 .apellido("Test")
                 .email("admin.test@testcorp.com")
                 .password("$2a$10$abcdefghijklmnopqrstuv")
-                .rol(Rol.ADMIN)
-                .activo(true)
+                .estado("ACTIVO")
                 .build();
         admin = entityManager.persistAndFlush(admin);
 
@@ -84,14 +91,34 @@ class JpaRepositoriesTest {
                 .razonSocial("Alpha S.A.")
                 .ruc("20987654321")
                 .responsable(admin)
-                .servicioContratado("SaaS Premium")
-                .estado(EstadoCliente.SALUDABLE)
-                .healthScore(90)
-                .csatPromedio(4.5)
-                .fechaInicio(LocalDate.now().minusMonths(3))
-                .fechaRenovacion(LocalDate.now().plusMonths(9))
+                .estado("ACTIVO")
                 .build();
         cliente = entityManager.persistAndFlush(cliente);
+
+        servicio = Servicio.builder()
+                .empresa(empresa)
+                .nombre("SaaS Premium")
+                .codigo("SRV-PREM")
+                .estado("ACTIVO")
+                .build();
+        servicio = entityManager.persistAndFlush(servicio);
+
+        clienteServicio = ClienteServicio.builder()
+                .cliente(cliente)
+                .servicio(servicio)
+                .fechaInicio(LocalDate.now().minusMonths(3))
+                .fechaFin(LocalDate.now().plusMonths(9))
+                .estado(EstadoServicioCliente.ACTIVO)
+                .build();
+        clienteServicio = entityManager.persistAndFlush(clienteServicio);
+
+        catInfra = CategoriaTicketEntity.builder()
+                .empresa(empresa)
+                .nombre("Infraestructura")
+                .descripcion("Infra")
+                .estado("ACTIVO")
+                .build();
+        catInfra = entityManager.persistAndFlush(catInfra);
     }
 
     @Test
@@ -113,7 +140,6 @@ class JpaRepositoriesTest {
         Page<Cliente> resultado = clienteRepository.buscarConFiltros(
                 empresa.getId(),
                 "Alpha",
-                EstadoCliente.SALUDABLE,
                 PageRequest.of(0, 10)
         );
 
@@ -121,26 +147,27 @@ class JpaRepositoriesTest {
         assertEquals(1, resultado.getTotalElements());
         assertEquals("Cliente Alpha", resultado.getContent().get(0).getNombreComercial());
 
-        long totalSaludables = clienteRepository.countByEmpresaIdAndEstado(empresa.getId(), EstadoCliente.SALUDABLE);
-        assertEquals(1, totalSaludables);
+        long total = clienteRepository.countByEmpresaId(empresa.getId());
+        assertEquals(1, total);
     }
 
     @Test
     @DisplayName("Debe registrar y consultar tickets con SLA y filtros por estado y prioridad")
     void testTicketRepository() {
         Ticket ticket = Ticket.builder()
-                .codigo("TK-9999")
+                .numeroTicket("TK-9999")
                 .empresa(empresa)
                 .cliente(cliente)
+                .contacto(null)
+                .categoriaEntity(catInfra)
                 .agente(admin)
                 .asunto("Incidencia crítica de servidor")
                 .descripcion("El servidor no responde peticiones")
-                .categoria(CategoriaTicket.INFRAESTRUCTURA)
                 .prioridad(PrioridadTicket.CRITICA)
                 .estado(EstadoTicket.ABIERTO)
-                .fechaCreacion(LocalDateTime.now())
-                .fechaLimitePrimeraRespuesta(LocalDateTime.now().plusHours(2))
-                .fechaLimiteResolucion(LocalDateTime.now().plusHours(24))
+                .createdAt(LocalDateTime.now())
+                .slaRespuestaLimite(LocalDateTime.now().plusHours(2))
+                .slaResolucionLimite(LocalDateTime.now().plusHours(24))
                 .build();
         entityManager.persistAndFlush(ticket);
 
@@ -159,15 +186,15 @@ class JpaRepositoriesTest {
     @DisplayName("Debe calcular promedio de CSAT correctamente por cliente")
     void testEncuestaSatisfaccionPromedio() {
         Ticket ticket1 = Ticket.builder()
-                .codigo("TK-1001")
+                .numeroTicket("TK-1001")
                 .empresa(empresa)
                 .cliente(cliente)
+                .categoriaEntity(catInfra)
                 .asunto("Consulta 1")
                 .descripcion("Detalle")
-                .categoria(CategoriaTicket.SOPORTE_TECNICO)
                 .prioridad(PrioridadTicket.MEDIA)
                 .estado(EstadoTicket.CERRADO)
-                .fechaCreacion(LocalDateTime.now().minusDays(2))
+                .createdAt(LocalDateTime.now().minusDays(2))
                 .build();
         ticket1 = entityManager.persistAndFlush(ticket1);
 
@@ -191,11 +218,10 @@ class JpaRepositoriesTest {
         Renovacion renovacion = Renovacion.builder()
                 .empresa(empresa)
                 .cliente(cliente)
+                .clienteServicio(clienteServicio)
                 .responsable(admin)
-                .servicio("SaaS Anual")
                 .fechaVencimiento(LocalDate.now().plusDays(20))
                 .estado(EstadoRenovacion.EN_NEGOCIACION)
-                .montoEstimado(BigDecimal.valueOf(12000.0))
                 .build();
         entityManager.persistAndFlush(renovacion);
 

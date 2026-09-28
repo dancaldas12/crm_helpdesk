@@ -7,7 +7,9 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "usuarios")
+@Table(name = "usuarios", uniqueConstraints = {
+    @UniqueConstraint(name = "uq_usuario_email_empresa", columnNames = {"empresa_id", "email"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -23,32 +25,60 @@ public class Usuario {
     @JoinColumn(name = "empresa_id", nullable = false)
     private Empresa empresa;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "rol_id", nullable = false)
+    private RolEntity rolEntity;
+
     @Column(nullable = false, length = 100)
     private String nombre;
 
     @Column(nullable = false, length = 100)
     private String apellido;
 
-    @Column(nullable = false, unique = true, length = 150)
+    @Column(nullable = false, length = 180)
     private String email;
 
-    @Column(nullable = false, length = 255)
+    @Column(name = "password_hash", nullable = false, length = 255)
     private String password;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private Rol rol;
+    @Column(length = 30)
+    private String telefono;
 
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean activo = true;
-
-    @Column(length = 500)
+    @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
     @Builder.Default
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime fechaCreacion = LocalDateTime.now();
+    @Column(nullable = false, length = 20)
+    private String estado = "ACTIVO";
+
+    @Column(name = "ultimo_acceso")
+    private LocalDateTime ultimoAcceso;
+
+    @Builder.Default
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Builder.Default
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt = LocalDateTime.now();
+
+    public Rol getRol() {
+        if (rolEntity != null && rolEntity.getNombre() != null) {
+            String roleName = rolEntity.getNombre().toUpperCase().trim();
+            if (roleName.contains("ADMIN")) return Rol.ADMIN;
+            if (roleName.contains("AGENTE") || roleName.contains("SOPORTE")) return Rol.AGENTE;
+            if (roleName.contains("SUPERVISOR") || roleName.contains("SUCCESS")) return Rol.SUPERVISOR;
+        }
+        return Rol.AGENTE;
+    }
+
+    public Boolean getActivo() {
+        return "ACTIVO".equalsIgnoreCase(this.estado);
+    }
+
+    public void setActivo(Boolean activo) {
+        this.estado = (Boolean.TRUE.equals(activo)) ? "ACTIVO" : "INACTIVO";
+    }
 
     public String getNombreCompleto() {
         return nombre + " " + apellido;
@@ -60,10 +90,26 @@ public class Usuario {
         return (n + a).isBlank() ? "U" : n + a;
     }
 
+    public LocalDateTime getFechaCreacion() {
+        return createdAt;
+    }
+
+    public void setFechaCreacion(LocalDateTime fechaCreacion) {
+        this.createdAt = fechaCreacion;
+    }
+
     @PrePersist
     public void prePersist() {
-        if (this.fechaCreacion == null) {
-            this.fechaCreacion = LocalDateTime.now();
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
         }
+        if (this.updatedAt == null) {
+            this.updatedAt = LocalDateTime.now();
+        }
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 }

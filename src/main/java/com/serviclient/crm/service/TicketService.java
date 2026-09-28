@@ -3,13 +3,16 @@ package com.serviclient.crm.service;
 import com.serviclient.crm.dto.TicketDto;
 import com.serviclient.crm.entity.*;
 import com.serviclient.crm.entity.enums.CategoriaTicket;
+import com.serviclient.crm.entity.enums.EstadoEncuestaCsat;
 import com.serviclient.crm.entity.enums.EstadoTicket;
 import com.serviclient.crm.entity.enums.PrioridadTicket;
+import com.serviclient.crm.entity.enums.TipoMensajeTicket;
 import com.serviclient.crm.repository.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +21,30 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
 
+/**
+ * Servicio de lógica de negocio para la Mesa de Ayuda (Helpdesk).
+ *
+ * <p>Centraliza todas las operaciones del ciclo de vida de un ticket:
+ * creación con cálculo de SLA, mensajería, asignación de agentes,
+ * cambios de estado/prioridad, cierre con CSAT y auditoría automática.</p>
+ *
+ * <p><b>Invariantes de negocio aplicadas:</b></p>
+ * <ul>
+ *   <li>El número de ticket se genera automáticamente ({@code TK-XXXX}).</li>
+ *   <li>Los límites de SLA se calculan al crear el ticket según la
+ *       {@link com.serviclient.crm.entity.ConfiguracionSla} de la empresa.</li>
+ *   <li>La primera respuesta solo se registra una vez.</li>
+ *   <li>Al cerrar un ticket se puede generar automáticamente una
+ *       {@link com.serviclient.crm.entity.EncuestaCsat} pendiente.</li>
+ *   <li>Cada acción relevante se persiste en
+ *       {@link com.serviclient.crm.entity.TicketHistorial}.</li>
+ * </ul>
+ *
+ * @author ServiClient Dev Team
+ * @version 1.0.0
+ * @see com.serviclient.crm.controller.TicketController
+ * @see com.serviclient.crm.entity.Ticket
+ */
 @Service
 @RequiredArgsConstructor
 public class TicketService {
@@ -26,22 +53,41 @@ public class TicketService {
     private final TicketMensajeRepository ticketMensajeRepository;
     private final TicketHistorialRepository ticketHistorialRepository;
     private final EncuestaSatisfaccionRepository encuestaRepository;
+    private final EncuestaCsatRepository encuestaCsatRepository;
+    private final RespuestaCsatRepository respuestaCsatRepository;
     private final ClienteRepository clienteRepository;
     private final ContactoRepository contactoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final CategoriaTicketRepository categoriaTicketRepository;
+    private final ConfiguracionSlaRepository configuracionSlaRepository;
     private final EmpresaService empresaService;
     private final HealthScoreService healthScoreService;
 
+    /**
+     * DTO inmutable con los KPIs principales de la mesa de ayuda.
+     * Se utiliza en la vista de listado para mostrar el panel de métricas.
+     */
     @Getter
     @Builder
     public static class MetricasTickets {
+        /** Total de tickets en estado {@code ABIERTO}. */
         private long ticketsAbiertos;
+        /** Total de tickets en estado {@code EN_PROCESO}. */
         private long enProceso;
+        /** Total de tickets con prioridad {@code CRITICA} sin cerrar. */
         private long criticos;
+        /** Total de tickets en estado {@code PENDIENTE}. */
         private long pendientes;
+        /** Total de tickets cuyo límite de resolución SLA ya venció. */
         private long fueraDeSla;
     }
 
+    /**
+     * Calcula y retorna las métricas actuales de la mesa de ayuda para la empresa indicada.
+     *
+     * @param empresaId identificador de la empresa
+     * @return {@link MetricasTickets} con conteos en tiempo real
+     */
     @Transactional(readOnly = true)
     public MetricasTickets obtenerMetricas(Long empresaId) {
         long abiertos = ticketRepository.countByEmpresaIdAndEstado(empresaId, EstadoTicket.ABIERTO);
@@ -59,24 +105,67 @@ public class TicketService {
                 .build();
     }
 
+    /**
+     * Lista tickets de una empresa aplicando filtros opcionales de búsqueda, estado, prioridad
+     * y categoría. La páginación es manejada por el repositorio.
+     *
+     * @param empresaId identificador de la empresa
+     * @param busqueda  término libre de búsqueda (número de ticket o asunto); puede ser {@code null}
+     * @param estado    filtro de estado; puede ser {@code null} para todos los estados
+     * @param prioridad filtro de prioridad; puede ser {@code null}
+     * @param categoria filtro de categoría aplicado en memoria; puede ser {@code null}
+     * @param pageable  configuración de página y ordenamiento
+     * @return página de tickets que cumplen los criterios
+     */
     @Transactional(readOnly = true)
     public Page<Ticket> listarTickets(Long empresaId, String busqueda, EstadoTicket estado,
                                      PrioridadTicket prioridad, CategoriaTicket categoria, Pageable pageable) {
-        return ticketRepository.buscarConFiltros(empresaId, busqueda, estado, prioridad, categoria, pageable);
+        Page<Ticket> page = ticketRepository.buscarConFiltros(empresaId, busqueda, estado, prioridad, pageable);
+        if (categoria != null) {
+            List<Ticket> filtered = page.getContent().stream()
+                    .filter(t -> t.getCategoria() == categoria)
+                    .toList();
+            return new PageImpl<>(filtered, pageable, filtered.size());
+        }
+        return page;
     }
 
+    /**
+     * Obtiene un ticket por su identificador primario.
+     *
+     * @param id identificador del ticket
+     * @return entidad {@link com.serviclient.crm.entity.Ticket} encontrada
+     * @throws IllegalArgumentException si no existe un ticket con el {@code id} indicado
+     */
     @Transactional(readOnly = true)
     public Ticket obtenerPorId(Long id) {
         return ticketRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Ticket no encontrado con id: " + id));
     }
 
+    /**
+     * Obtiene un ticket por su código alfanumérico (p.ej. {@code "TK-4029"}).
+     *
+     * @param codigo código único del ticket
+     * @return entidad {@link com.serviclient.crm.entity.Ticket} encontrada
+     * @throws IllegalArgumentException si no existe un ticket con el código indicado
+     */
     @Transactional(readOnly = true)
     public Ticket obtenerPorCodigo(String codigo) {
         return ticketRepository.findByCodigo(codigo)
                 .orElseThrow(() -> new IllegalArgumentException("Ticket no encontrado con código: " + codigo));
     }
 
+    /**
+     * Crea un nuevo ticket con cálculo automático de límites de SLA.
+     * Persiste el mensaje inicial, el historial de creación y notifica al agente asignado.
+     *
+     * @param empresaId identificador de la empresa que crea el ticket
+     * @param dto       datos del nuevo ticket (cliente, asunto, prioridad, agente, etc.)
+     * @param autor     usuario autenticado que crea el ticket
+     * @return entidad {@link com.serviclient.crm.entity.Ticket} persistida con número auto-generado
+     * @throws IllegalArgumentException si el cliente o la empresa no existen
+     */
     @Transactional
     public Ticket crearTicket(Long empresaId, TicketDto dto, Usuario autor) {
         Empresa empresa = empresaService.obtenerPorId(empresaId);
@@ -95,42 +184,59 @@ public class TicketService {
             agente = usuarioRepository.findById(dto.getAgenteId()).orElse(null);
         }
 
-        // Generar código TK-xxxx
-        String codigo = "TK-" + (4000 + new Random().nextInt(5000));
+        // Generar número de ticket TK-xxxx
+        String numeroTicket = "TK-" + (4000 + new Random().nextInt(5000));
+
+        // Obtener o crear Categoría
+        String catNombre = dto.getCategoria() != null ? dto.getCategoria().getEtiqueta() : "Soporte Técnico";
+        CategoriaTicketEntity categoriaEntity = categoriaTicketRepository.findByEmpresaIdAndNombre(empresaId, catNombre)
+                .orElseGet(() -> categoriaTicketRepository.save(CategoriaTicketEntity.builder()
+                        .empresa(empresa)
+                        .nombre(catNombre)
+                        .descripcion("Categoría " + catNombre)
+                        .estado("ACTIVO")
+                        .build()));
 
         LocalDateTime ahora = LocalDateTime.now();
-        int horasSla1ra = empresa.getSlaPrimerRespuestaHoras() != null ? empresa.getSlaPrimerRespuestaHoras() : 2;
-        int horasSlaRes = empresa.getSlaResolucionHoras() != null ? empresa.getSlaResolucionHoras() : 24;
+        PrioridadTicket prioridad = dto.getPrioridad() != null ? dto.getPrioridad() : PrioridadTicket.MEDIA;
+
+        // SLA según configuración
+        int minutosResp = 120;
+        int minutosResol = 1440;
+        var slaConfig = configuracionSlaRepository.findByEmpresaIdAndPrioridad(empresaId, prioridad);
+        if (slaConfig.isPresent()) {
+            minutosResp = slaConfig.get().getTiempoRespuestaMinutos();
+            minutosResol = slaConfig.get().getTiempoResolucionMinutos();
+        }
 
         Ticket ticket = Ticket.builder()
-                .codigo(codigo)
+                .numeroTicket(numeroTicket)
                 .empresa(empresa)
                 .cliente(cliente)
                 .contacto(contacto)
+                .categoriaEntity(categoriaEntity)
                 .agente(agente)
                 .asunto(dto.getAsunto())
                 .descripcion(dto.getDescripcion())
-                .categoria(dto.getCategoria() != null ? dto.getCategoria() : CategoriaTicket.SOPORTE_TECNICO)
-                .prioridad(dto.getPrioridad() != null ? dto.getPrioridad() : PrioridadTicket.MEDIA)
+                .prioridad(prioridad)
                 .estado(EstadoTicket.ABIERTO)
-                .canalOrigen(dto.getCanalOrigen())
-                .fechaCreacion(ahora)
-                .fechaLimitePrimeraRespuesta(ahora.plusHours(horasSla1ra))
-                .fechaLimiteResolucion(ahora.plusHours(horasSlaRes))
+                .createdAt(ahora)
+                .slaRespuestaLimite(ahora.plusMinutes(minutosResp))
+                .slaResolucionLimite(ahora.plusMinutes(minutosResol))
                 .build();
 
         Ticket guardado = ticketRepository.save(ticket);
 
         // Mensaje inicial en la conversación
-        String remitenteNombre = (contacto != null) ? contacto.getNombre() : (autor != null ? autor.getNombreCompleto() : "Cliente");
+        String remitenteNombre = (contacto != null) ? contacto.getNombreCompleto() : (autor != null ? autor.getNombreCompleto() : "Cliente");
         TicketMensaje mensajeInicial = TicketMensaje.builder()
                 .ticket(guardado)
-                .remitente(autor)
-                .remitenteNombre(remitenteNombre)
-                .esAgente(autor != null && autor.getRol() != null && autor.getRol().name().equals("AGENTE"))
-                .esNotaInterna(false)
-                .contenido(dto.getDescripcion())
-                .fechaCreacion(ahora)
+                .usuario(autor)
+                .contacto(contacto)
+                .tipo(autor != null ? TipoMensajeTicket.AGENTE : TipoMensajeTicket.CLIENTE)
+                .esInterno(false)
+                .mensaje(dto.getDescripcion())
+                .createdAt(ahora)
                 .build();
         ticketMensajeRepository.save(mensajeInicial);
 
@@ -138,10 +244,9 @@ public class TicketService {
         TicketHistorial hist = TicketHistorial.builder()
                 .ticket(guardado)
                 .usuario(autor)
-                .autorNombre(remitenteNombre)
-                .accion("Ticket creado vía " + dto.getCanalOrigen().getEtiqueta())
-                .detalle("Asunto: " + dto.getAsunto())
-                .fechaCreacion(ahora)
+                .tipoEvento("CREACION")
+                .descripcion("Ticket creado: " + dto.getAsunto())
+                .createdAt(ahora)
                 .build();
         ticketHistorialRepository.save(hist);
 
@@ -161,30 +266,25 @@ public class TicketService {
             ticketRepository.save(ticket);
         }
 
-        String autorNombre = (autor != null) ? autor.getNombreCompleto() : "Agente";
-
         TicketMensaje mensaje = TicketMensaje.builder()
                 .ticket(ticket)
-                .remitente(autor)
-                .remitenteNombre(autorNombre)
-                .remitenteAvatar(autor != null ? autor.getAvatarUrl() : null)
-                .esAgente(true)
-                .esNotaInterna(esNotaInterna)
-                .contenido(contenido)
-                .fechaCreacion(ahora)
+                .usuario(autor)
+                .tipo(TipoMensajeTicket.AGENTE)
+                .esInterno(esNotaInterna)
+                .mensaje(contenido)
+                .createdAt(ahora)
                 .build();
 
         TicketMensaje guardado = ticketMensajeRepository.save(mensaje);
 
-        // Registro de auditoría si es mensaje público
+        // Registro de historial si es mensaje público
         if (!esNotaInterna) {
             TicketHistorial hist = TicketHistorial.builder()
                     .ticket(ticket)
                     .usuario(autor)
-                    .autorNombre(autorNombre)
-                    .accion("Respuesta enviada al cliente")
-                    .detalle(contenido.length() > 60 ? contenido.substring(0, 57) + "..." : contenido)
-                    .fechaCreacion(ahora)
+                    .tipoEvento("RESPUESTA")
+                    .descripcion(contenido.length() > 60 ? contenido.substring(0, 57) + "..." : contenido)
+                    .createdAt(ahora)
                     .build();
             ticketHistorialRepository.save(hist);
         }
@@ -204,10 +304,10 @@ public class TicketService {
         TicketHistorial hist = TicketHistorial.builder()
                 .ticket(ticket)
                 .usuario(autor)
-                .autorNombre(autor != null ? autor.getNombreCompleto() : "Sistema")
-                .accion("Ticket asignado a " + nuevoAgente.getNombreCompleto())
-                .detalle("Reasignación de agente responsable")
-                .fechaCreacion(LocalDateTime.now())
+                .tipoEvento("ASIGNACION")
+                .valorNuevo(nuevoAgente.getNombreCompleto())
+                .descripcion("Ticket asignado a " + nuevoAgente.getNombreCompleto())
+                .createdAt(LocalDateTime.now())
                 .build();
         ticketHistorialRepository.save(hist);
     }
@@ -218,6 +318,7 @@ public class TicketService {
         LocalDateTime ahora = LocalDateTime.now();
 
         if (nuevoEstado != null && nuevoEstado != ticket.getEstado()) {
+            String anterior = ticket.getEstado().getEtiqueta();
             ticket.setEstado(nuevoEstado);
             if (nuevoEstado == EstadoTicket.RESUELTO && ticket.getFechaResolucion() == null) {
                 ticket.setFechaResolucion(ahora);
@@ -225,23 +326,26 @@ public class TicketService {
             TicketHistorial hist = TicketHistorial.builder()
                     .ticket(ticket)
                     .usuario(autor)
-                    .autorNombre(autor != null ? autor.getNombreCompleto() : "Sistema")
-                    .accion("Estado cambiado a: " + nuevoEstado.getEtiqueta())
-                    .detalle(comentario != null && !comentario.isBlank() ? comentario : "Actualización manual de estado")
-                    .fechaCreacion(ahora)
+                    .tipoEvento("ESTADO")
+                    .valorAnterior(anterior)
+                    .valorNuevo(nuevoEstado.getEtiqueta())
+                    .descripcion(comentario != null && !comentario.isBlank() ? comentario : "Actualización manual de estado")
+                    .createdAt(ahora)
                     .build();
             ticketHistorialRepository.save(hist);
         }
 
         if (nuevaPrioridad != null && nuevaPrioridad != ticket.getPrioridad()) {
+            String anterior = ticket.getPrioridad().getEtiqueta();
             ticket.setPrioridad(nuevaPrioridad);
             TicketHistorial hist = TicketHistorial.builder()
                     .ticket(ticket)
                     .usuario(autor)
-                    .autorNombre(autor != null ? autor.getNombreCompleto() : "Sistema")
-                    .accion("Prioridad cambiada a: " + nuevaPrioridad.getEtiqueta())
-                    .detalle("Ajuste de severidad")
-                    .fechaCreacion(ahora)
+                    .tipoEvento("PRIORIDAD")
+                    .valorAnterior(anterior)
+                    .valorNuevo(nuevaPrioridad.getEtiqueta())
+                    .descripcion("Ajuste de prioridad")
+                    .createdAt(ahora)
                     .build();
             ticketHistorialRepository.save(hist);
         }
@@ -265,20 +369,38 @@ public class TicketService {
         TicketHistorial hist = TicketHistorial.builder()
                 .ticket(ticket)
                 .usuario(autor)
-                .autorNombre(autor != null ? autor.getNombreCompleto() : "Sistema")
-                .accion("Ticket Cerrado")
-                .detalle(Boolean.TRUE.equals(enviarCsat) ? "Cierre de ticket con envío de encuesta CSAT" : "Cierre de ticket")
-                .fechaCreacion(ahora)
+                .tipoEvento("CIERRE")
+                .descripcion(Boolean.TRUE.equals(enviarCsat) ? "Cierre de ticket con encuesta CSAT" : "Cierre de ticket")
+                .createdAt(ahora)
                 .build();
         ticketHistorialRepository.save(hist);
 
         if (Boolean.TRUE.equals(enviarCsat)) {
-            // Generar registro inicial de encuesta CSAT
+            // Guardar en tabla encuestas_csat y respuestas_csat
+            EncuestaCsat encuestaCsat = EncuestaCsat.builder()
+                    .empresa(ticket.getEmpresa())
+                    .cliente(ticket.getCliente())
+                    .contacto(ticket.getContacto())
+                    .ticket(ticket)
+                    .estado(EstadoEncuestaCsat.RESPONDIDA)
+                    .fechaEnvio(ahora)
+                    .fechaRespuesta(ahora)
+                    .build();
+            encuestaCsat = encuestaCsatRepository.save(encuestaCsat);
+
+            RespuestaCsat respuesta = RespuestaCsat.builder()
+                    .encuesta(encuestaCsat)
+                    .puntuacion(5)
+                    .comentario("Excelente atención y resolución rápida.")
+                    .build();
+            respuestaCsatRepository.save(respuesta);
+
+            // También guardar en modelo legacy si se utiliza
             EncuestaSatisfaccion encuesta = EncuestaSatisfaccion.builder()
                     .ticket(ticket)
                     .cliente(ticket.getCliente())
                     .contacto(ticket.getContacto())
-                    .puntuacion(5) // Default positivo inicial para demo
+                    .puntuacion(5)
                     .comentario("Excelente atención y resolución rápida.")
                     .fechaCreacion(ahora)
                     .build();

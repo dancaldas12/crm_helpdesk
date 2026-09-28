@@ -4,11 +4,12 @@ import com.serviclient.crm.entity.enums.EstadoRenovacion;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "renovacion_seguimientos")
+@Table(name = "renovacion_seguimientos", indexes = {
+    @Index(name = "idx_seguimiento_renovacion_fecha", columnList = "renovacion_id, fecha")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -25,11 +26,11 @@ public class RenovacionSeguimiento {
     private Renovacion renovacion;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "responsable_id")
-    private Usuario responsable;
+    @JoinColumn(name = "usuario_id")
+    private Usuario usuario;
 
     @Column(nullable = false)
-    private LocalDate fecha;
+    private LocalDateTime fecha;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
@@ -39,16 +40,32 @@ public class RenovacionSeguimiento {
     private String comentario;
 
     @Builder.Default
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime fechaCreacion = LocalDateTime.now();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    public Usuario getResponsable() {
+        return usuario;
+    }
+
+    public void setResponsable(Usuario responsable) {
+        this.usuario = responsable;
+    }
+
+    public LocalDateTime getFechaCreacion() {
+        return createdAt;
+    }
+
+    public void setFechaCreacion(LocalDateTime fechaCreacion) {
+        this.createdAt = fechaCreacion;
+    }
 
     @PrePersist
     public void prePersist() {
-        if (this.fechaCreacion == null) {
-            this.fechaCreacion = LocalDateTime.now();
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
         }
         if (this.fecha == null) {
-            this.fecha = LocalDate.now();
+            this.fecha = LocalDateTime.now();
         }
     }
 }
