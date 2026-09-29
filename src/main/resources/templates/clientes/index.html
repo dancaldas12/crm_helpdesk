@@ -1,147 +1,317 @@
-<!DOCTYPE html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org" 
-      th:replace="~{layout/base :: layout('Gestión de Clientes', 'clientes', ~{::section})}">
-<head>
+<!doctype html>
+<html
+  lang="es"
+  xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{layout/base :: layout('Gestión de Clientes', 'clientes', ~{::section})}"
+>
+  <head>
     <title>Gestión de Clientes - ServiClient</title>
-</head>
-<body>
+  </head>
+  <body>
     <section>
-        <div class="page-header-row">
-            <div class="page-title-group">
-                <h1>Gestión de clientes</h1>
-                <p>Administra y consulta la información de los clientes</p>
+      <div class="page-header-row">
+        <div class="page-title-group">
+          <h1>Gestión de clientes</h1>
+          <p>Administra y consulta la información de los clientes</p>
+        </div>
+        <div>
+          <a th:href="@{/clientes/nuevo}" class="btn btn-primary">
+            <svg
+              style="width: 18px; height: 18px"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            <span>Nuevo cliente</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Metric Cards -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-card-label">Total Clientes</div>
+          <div class="metric-card-value" th:text="${metricas.totalClientes}">
+            124
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-card-label">Saludables</div>
+          <div
+            class="metric-card-value text-saludable"
+            th:text="${metricas.saludables}"
+          >
+            82
+          </div>
+          <div class="metric-card-trend trend-up">
+            <svg
+              style="width: 14px; height: 14px"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M5 10l7-7m0 0l7 7m-7-7v18"
+              />
+            </svg>
+            <span>5% este mes</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-card-label">En Observación</div>
+          <div
+            class="metric-card-value text-observacion"
+            th:text="${metricas.enObservacion}"
+          >
+            24
+          </div>
+          <div class="metric-card-trend trend-neutral">
+            <span>Mantener atención</span>
+          </div>
+        </div>
+
+        <div class="metric-card card-risk">
+          <div class="metric-card-label">En Riesgo</div>
+          <div
+            class="metric-card-value text-riesgo"
+            th:text="${metricas.enRiesgo}"
+          >
+            18
+          </div>
+          <div class="metric-card-trend trend-risk">
+            <svg
+              style="width: 14px; height: 14px"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+            <span>Acción requerida</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table Card -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <form
+            th:action="@{/clientes}"
+            method="get"
+            class="table-search-group"
+          >
+            <div style="position: relative">
+              <svg
+                style="
+                  width: 16px;
+                  height: 16px;
+                  position: absolute;
+                  left: 12px;
+                  top: 50%;
+                  transform: translateY(-50%);
+                  color: var(--color-text-sub);
+                "
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                type="text"
+                name="busqueda"
+                th:value="${busqueda}"
+                class="input-search-table"
+                placeholder="Filtrar tabla..."
+                onchange="this.form.submit()"
+              />
             </div>
-            <div>
-                <a th:href="@{/clientes/nuevo}" class="btn btn-primary">
-                    <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span>Nuevo cliente</span>
+
+            <select
+              name="estado"
+              class="form-select"
+              style="width: 180px; padding: 7px 12px; font-size: 13px"
+              onchange="this.form.submit()"
+            >
+              <option value="">Todos los estados</option>
+              <option
+                th:each="est : ${estados}"
+                th:value="${est}"
+                th:text="${est.etiqueta}"
+                th:selected="${est == estadoSeleccionado}"
+              ></option>
+            </select>
+          </form>
+
+          <div
+            style="
+              font-size: 13px;
+              color: var(--color-text-muted);
+              font-weight: 600;
+            "
+          >
+            Ordenar por: Nombre
+          </div>
+        </div>
+
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Responsable</th>
+              <th>Servicio Contratado</th>
+              <th>Estado</th>
+              <th>Health Score</th>
+              <th>CSAT</th>
+              <th>Próxima Renovación</th>
+              <th style="text-align: right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:if="${clientesPage.content.isEmpty()}">
+              <td
+                colspan="8"
+                style="
+                  text-align: center;
+                  padding: 32px;
+                  color: var(--color-text-muted);
+                "
+              >
+                No se encontraron clientes registrados con los filtros
+                aplicados.
+              </td>
+            </tr>
+            <tr th:each="cliente : ${clientesPage.content}">
+              <td>
+                <a
+                  th:href="@{/clientes/{id}(id=${cliente.id})}"
+                  style="
+                    font-weight: 700;
+                    color: var(--color-text-main);
+                    text-decoration: none;
+                  "
+                  th:text="${cliente.nombreComercial}"
+                  >NovaTech Solutions</a
+                >
+              </td>
+              <td
+                th:text="${cliente.responsable != null ? cliente.responsable.nombreCompleto : 'Sin asignar'}"
+              >
+                Ana García
+              </td>
+              <td th:text="${cliente.servicioContratado}">SaaS Enterprise</td>
+              <td>
+                <span
+                  class="badge"
+                  th:classappend="${cliente.estadoSalud.name() == 'SALUDABLE' ? 'badge-saludable' : (cliente.estadoSalud.name() == 'OBSERVACION' ? 'badge-observacion' : 'badge-riesgo')}"
+                  th:text="${cliente.estadoSalud.etiqueta}"
+                >
+                  En riesgo
+                </span>
+              </td>
+              <td>
+                <div class="health-score-cell">
+                  <span
+                    class="health-score-val"
+                    th:text="${cliente.healthScore}"
+                    th:style="${cliente.healthScore < 50 ? 'color: #DC2626;' : (cliente.healthScore < 70 ? 'color: #D97706;' : 'color: #059669;')}"
+                    >45</span
+                  >
+                  <div class="health-bar-bg">
+                    <div
+                      class="health-bar-fill"
+                      th:style="'width: ' + ${cliente.healthScore} + '%;'"
+                      th:classappend="${cliente.healthScore >= 70 ? 'fill-green' : (cliente.healthScore >= 50 ? 'fill-amber' : 'fill-red')}"
+                    ></div>
+                  </div>
+                </div>
+              </td>
+              <td
+                style="font-weight: 600"
+                th:text="${cliente.csatPorcentaje + '%'}"
+              >
+                92%
+              </td>
+              <td>
+                <div
+                  style="font-weight: 600"
+                  th:text="${#temporals.format(cliente.fechaRenovacion, 'dd MMM yyyy')}"
+                >
+                  12 Oct 2024
+                </div>
+                <div
+                  style="font-size: 11.5px; font-weight: 700; color: #dc2626"
+                  th:if="${cliente.diasParaRenovacion >= 0 and cliente.diasParaRenovacion <= 30}"
+                  th:text="'Faltan ' + ${cliente.diasParaRenovacion} + ' días'"
+                >
+                  Faltan 5 días
+                </div>
+                <div
+                  style="font-size: 11.5px; color: var(--color-text-muted)"
+                  th:if="${cliente.diasParaRenovacion > 30}"
+                  th:text="'Faltan ' + ${cliente.diasParaRenovacion} + ' días'"
+                >
+                  Faltan 98 días
+                </div>
+              </td>
+              <td style="text-align: right">
+                <a
+                  th:href="@{/clientes/{id}(id=${cliente.id})}"
+                  class="btn btn-secondary"
+                  style="padding: 6px 12px; font-size: 12px"
+                >
+                  Ver 360°
                 </a>
-            </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="table-pagination">
+          <span
+            th:text="'Mostrando ' + ${clientesPage.numberOfElements} + ' de ' + ${clientesPage.totalElements} + ' clientes'"
+            >Mostrando 1 - 3 de 124 clientes</span
+          >
+          <div style="display: flex; gap: 8px">
+            <a
+              th:if="${clientesPage.hasPrevious()}"
+              th:href="@{/clientes(page=${clientesPage.number - 1}, busqueda=${busqueda}, estado=${estadoSeleccionado})}"
+              class="btn btn-secondary"
+              style="padding: 6px 12px; font-size: 12px"
+              >Anterior</a
+            >
+            <a
+              th:if="${clientesPage.hasNext()}"
+              th:href="@{/clientes(page=${clientesPage.number + 1}, busqueda=${busqueda}, estado=${estadoSeleccionado})}"
+              class="btn btn-secondary"
+              style="padding: 6px 12px; font-size: 12px"
+              >Siguiente</a
+            >
+          </div>
         </div>
-
-        <!-- Metric Cards -->
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-card-label">Total Clientes</div>
-                <div class="metric-card-value" th:text="${metricas.totalClientes}">124</div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-card-label">Saludables</div>
-                <div class="metric-card-value text-saludable" th:text="${metricas.saludables}">82</div>
-                <div class="metric-card-trend trend-up">
-                    <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                    </svg>
-                    <span>5% este mes</span>
-                </div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-card-label">En Observación</div>
-                <div class="metric-card-value text-observacion" th:text="${metricas.enObservacion}">24</div>
-                <div class="metric-card-trend trend-neutral">
-                    <span>Mantener atención</span>
-                </div>
-            </div>
-
-            <div class="metric-card card-risk">
-                <div class="metric-card-label">En Riesgo</div>
-                <div class="metric-card-value text-riesgo" th:text="${metricas.enRiesgo}">18</div>
-                <div class="metric-card-trend trend-risk">
-                    <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <span>Acción requerida</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Table Card -->
-        <div class="table-card">
-            <div class="table-toolbar">
-                <form th:action="@{/clientes}" method="get" class="table-search-group">
-                    <div style="position: relative;">
-                        <svg style="width: 16px; height: 16px; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--color-text-sub);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        <input type="text" name="busqueda" th:value="${busqueda}" class="input-search-table" placeholder="Filtrar tabla..." onchange="this.form.submit()">
-                    </div>
-
-                    <select name="estado" class="form-select" style="width: 180px; padding: 7px 12px; font-size: 13px;" onchange="this.form.submit()">
-                        <option value="">Todos los estados</option>
-                        <option th:each="est : ${estados}" th:value="${est}" th:text="${est.etiqueta}" th:selected="${est == estadoSeleccionado}"></option>
-                    </select>
-                </form>
-
-                <div style="font-size: 13px; color: var(--color-text-muted); font-weight: 600;">
-                    Ordenar por: Nombre
-                </div>
-            </div>
-
-            <table class="custom-table">
-                <thead>
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Responsable</th>
-                        <th>Servicio Contratado</th>
-                        <th>Estado</th>
-                        <th>Health Score</th>
-                        <th>CSAT</th>
-                        <th>Próxima Renovación</th>
-                        <th style="text-align: right;">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:if="${clientesPage.content.isEmpty()}">
-                        <td colspan="8" style="text-align: center; padding: 32px; color: var(--color-text-muted);">
-                            No se encontraron clientes registrados con los filtros aplicados.
-                        </td>
-                    </tr>
-                    <tr th:each="cliente : ${clientesPage.content}">
-                        <td>
-                            <a th:href="@{/clientes/{id}(id=${cliente.id})}" style="font-weight: 700; color: var(--color-text-main); text-decoration: none;" th:text="${cliente.nombreComercial}">NovaTech Solutions</a>
-                        </td>
-                        <td th:text="${cliente.responsable != null ? cliente.responsable.nombreCompleto : 'Sin asignar'}">Ana García</td>
-                        <td th:text="${cliente.servicioContratado}">SaaS Enterprise</td>
-                        <td>
-                            <span class="badge" th:classappend="${cliente.estado.name() == 'SALUDABLE' ? 'badge-saludable' : (cliente.estado.name() == 'OBSERVACION' ? 'badge-observacion' : 'badge-riesgo')}" th:text="${cliente.estado.etiqueta}">
-                                En riesgo
-                            </span>
-                        </td>
-                        <td>
-                            <div class="health-score-cell">
-                                <span class="health-score-val" th:text="${cliente.healthScore}" th:style="${cliente.healthScore < 50 ? 'color: #DC2626;' : (cliente.healthScore < 70 ? 'color: #D97706;' : 'color: #059669;')}">45</span>
-                                <div class="health-bar-bg">
-                                    <div class="health-bar-fill" th:style="'width: ' + ${cliente.healthScore} + '%;'" th:classappend="${cliente.healthScore >= 70 ? 'fill-green' : (cliente.healthScore >= 50 ? 'fill-amber' : 'fill-red')}"></div>
-                                </div>
-                            </div>
-                        </td>
-                        <td style="font-weight: 600;" th:text="${cliente.csatPorcentaje + '%'}">92%</td>
-                        <td>
-                            <div style="font-weight: 600;" th:text="${#temporals.format(cliente.fechaRenovacion, 'dd MMM yyyy')}">12 Oct 2024</div>
-                            <div style="font-size: 11.5px; font-weight: 700; color: #DC2626;" th:if="${cliente.diasParaRenovacion >= 0 and cliente.diasParaRenovacion <= 30}" th:text="'Faltan ' + ${cliente.diasParaRenovacion} + ' días'">Faltan 5 días</div>
-                            <div style="font-size: 11.5px; color: var(--color-text-muted);" th:if="${cliente.diasParaRenovacion > 30}" th:text="'Faltan ' + ${cliente.diasParaRenovacion} + ' días'">Faltan 98 días</div>
-                        </td>
-                        <td style="text-align: right;">
-                            <a th:href="@{/clientes/{id}(id=${cliente.id})}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
-                                Ver 360°
-                            </a>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div class="table-pagination">
-                <span th:text="'Mostrando ' + ${clientesPage.numberOfElements} + ' de ' + ${clientesPage.totalElements} + ' clientes'">Mostrando 1 - 3 de 124 clientes</span>
-                <div style="display: flex; gap: 8px;">
-                    <a th:if="${clientesPage.hasPrevious()}" th:href="@{/clientes(page=${clientesPage.number - 1}, busqueda=${busqueda}, estado=${estadoSeleccionado})}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">Anterior</a>
-                    <a th:if="${clientesPage.hasNext()}" th:href="@{/clientes(page=${clientesPage.number + 1}, busqueda=${busqueda}, estado=${estadoSeleccionado})}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">Siguiente</a>
-                </div>
-            </div>
-        </div>
+      </div>
     </section>
-</body>
+  </body>
 </html>

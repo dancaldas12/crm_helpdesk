@@ -78,7 +78,7 @@ public class AuthController {
     @ApiResponse(responseCode = "302", description = "Redirección a /clientes")
     @GetMapping("/")
     public String index() {
-        return "redirect:/clientes";
+        return "redirect:/dashboard";
     }
 
     /**

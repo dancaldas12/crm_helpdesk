@@ -105,7 +105,7 @@ public class TicketController {
                                 Model model) {
         Long empresaId = (userDetails != null && userDetails.getEmpresaId() != null) ? userDetails.getEmpresaId() : 1L;
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("fechaCreacion").descending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Ticket> ticketsPage = ticketService.listarTickets(empresaId, busqueda, estado, prioridad, categoria, pageable);
         TicketService.MetricasTickets metricas = ticketService.obtenerMetricas(empresaId);
 

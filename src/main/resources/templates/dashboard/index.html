@@ -1,0 +1,359 @@
+<!doctype html>
+<html
+  lang="es"
+  xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{layout/base :: layout('Dashboard', 'dashboard', ~{::section})}"
+>
+  <body>
+    <section>
+      <div class="page-header-row">
+        <div class="page-title-group">
+          <h1>Dashboard</h1>
+          <p>
+            Resumen general de clientes, soporte, satisfacción y renovaciones.
+          </p>
+        </div>
+
+        <div class="dashboard-period">Últimos 30 días</div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="dashboard-kpis">
+        <div class="dashboard-kpi">
+          <span class="dashboard-kpi-label">CLIENTES</span>
+
+          <div
+            class="dashboard-kpi-value"
+            th:text="${clientesMetricas.totalClientes}"
+          >
+            124
+          </div>
+
+          <span class="dashboard-kpi-sub text-green">
+            Clientes registrados
+          </span>
+        </div>
+
+        <div class="dashboard-kpi">
+          <span class="dashboard-kpi-label">TICKETS</span>
+
+          <div class="dashboard-kpi-value" th:text="${totalTickets}">124</div>
+
+          <span
+            class="dashboard-kpi-sub text-red"
+            th:text="${ticketMetricas.criticos
+                  + ' críticos · '
+                  + ticketMetricas.fueraDeSla
+                  + ' fuera de SLA'}"
+          >
+          </span>
+        </div>
+
+        <div class="dashboard-kpi">
+          <span class="dashboard-kpi-label">SATISFACCIÓN</span>
+
+          <div>
+            <span class="dashboard-kpi-value" th:text="${csatPromedio}">
+              4.3
+            </span>
+
+            <span class="dashboard-kpi-unit">/ 5</span>
+          </div>
+
+          <span
+            class="dashboard-kpi-sub text-green"
+            th:text="${satisfaccionPorcentaje
+                  + '% de satisfacción'}"
+          >
+          </span>
+        </div>
+
+        <div class="dashboard-kpi">
+          <span class="dashboard-kpi-label">RENOVACIONES</span>
+
+          <div
+            class="dashboard-kpi-value"
+            th:text="${renovacionMetricas.menosDe30Dias
+                 + ' próximas'}"
+          ></div>
+
+          <span class="dashboard-kpi-sub"> En los próximos 30 días </span>
+        </div>
+      </div>
+
+      <!-- FILA 2 -->
+      <div class="dashboard-grid">
+        <!-- Salud -->
+        <div class="dashboard-panel">
+          <div class="dashboard-panel-header">
+            <h2>Salud de clientes</h2>
+
+            <a th:href="@{/clientes}"> Ver clientes → </a>
+          </div>
+
+          <p class="dashboard-panel-desc">
+            Distribución del estado actual de los clientes.
+          </p>
+
+          <div class="health-distribution">
+            <div
+              class="health-green"
+              th:style="'width:' + ${porcentajeSaludables} + '%'"
+            ></div>
+
+            <div
+              class="health-yellow"
+              th:style="'width:' + ${porcentajeObservacion} + '%'"
+            ></div>
+
+            <div
+              class="health-red"
+              th:style="'width:' + ${porcentajeRiesgo} + '%'"
+            ></div>
+          </div>
+
+          <div class="health-boxes">
+            <div class="health-box">
+              <span class="health-status green-dot"> Saludables </span>
+
+              <strong th:text="${clientesMetricas.saludables}"> 82 </strong>
+
+              <small th:text="${porcentajeSaludables + '%'}"> </small>
+            </div>
+
+            <div class="health-box">
+              <span class="health-status yellow-dot"> En observación </span>
+
+              <strong th:text="${clientesMetricas.enObservacion}"> 24 </strong>
+
+              <small th:text="${porcentajeObservacion + '%'}"> </small>
+            </div>
+
+            <div class="health-box">
+              <span class="health-status red-dot"> En riesgo </span>
+
+              <strong th:text="${clientesMetricas.enRiesgo}"> 18 </strong>
+
+              <small th:text="${porcentajeRiesgo + '%'}"> </small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tickets -->
+        <div class="dashboard-panel">
+          <div class="dashboard-panel-header">
+            <h2>Estado de tickets</h2>
+
+            <a th:href="@{/tickets}"> Ver tickets → </a>
+          </div>
+
+          <div class="ticket-summary-grid">
+            <div class="ticket-summary">
+              <span>Abiertos</span>
+              <strong th:text="${ticketMetricas.ticketsAbiertos}"> 0 </strong>
+            </div>
+
+            <div class="ticket-summary purple">
+              <span>En proceso</span>
+              <strong th:text="${ticketMetricas.enProceso}"> 0 </strong>
+            </div>
+
+            <div class="ticket-summary yellow">
+              <span>Pendientes</span>
+              <strong th:text="${ticketMetricas.pendientes}"> 0 </strong>
+            </div>
+
+            <div class="ticket-summary red">
+              <span>Críticos</span>
+              <strong th:text="${ticketMetricas.criticos}"> 0 </strong>
+            </div>
+
+            <div class="ticket-summary red">
+              <span>Fuera de SLA</span>
+              <strong th:text="${ticketMetricas.fueraDeSla}"> 0 </strong>
+            </div>
+          </div>
+
+          <div class="dashboard-warning" th:if="${ticketMetricas.criticos > 0}">
+            ⚠ Atención prioritaria en incidencias críticas
+          </div>
+        </div>
+      </div>
+
+      <!-- RENOVACIONES -->
+      <div class="dashboard-panel dashboard-full">
+        <div class="dashboard-panel-header">
+          <h2>Renovaciones</h2>
+
+          <a th:href="@{/renovaciones}"> Ver todas las renovaciones → </a>
+        </div>
+
+        <div class="renewal-tags">
+          <span
+            class="renewal-tag urgent"
+            th:text="'< 30 días: '
+                  + ${renovacionMetricas.menosDe30Dias}"
+          >
+          </span>
+
+          <span
+            class="renewal-tag"
+            th:text="'31–90 días: '
+                  + ${renovacionMetricas.de31a90Dias}"
+          >
+          </span>
+
+          <span
+            class="renewal-tag"
+            th:text="'> 90 días: '
+                  + ${renovacionMetricas.masDe90Dias}"
+          >
+          </span>
+
+          <span
+            class="renewal-tag completed"
+            th:text="'Completadas: '
+                  + ${renovacionMetricas.completadas}"
+          >
+          </span>
+        </div>
+
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Servicio</th>
+              <th>Días restantes</th>
+              <th>Responsable</th>
+              <th>Estado</th>
+              <th>Health Score</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr th:each="r : ${proximasRenovaciones}">
+              <td th:text="${r.cliente.nombreComercial}">Cliente</td>
+
+              <td th:text="${r.servicio}">Servicio</td>
+
+              <td>
+                <span
+                  class="badge"
+                  th:classappend="${r.diasRestantes <= 30
+                          ? 'badge-riesgo'
+                          : 'badge-observacion'}"
+                  th:text="${r.diasRestantes + ' días'}"
+                >
+                </span>
+              </td>
+
+              <td
+                th:text="${r.responsable != null
+                ? r.responsable.nombreCompleto
+                : 'Sin asignar'}"
+              ></td>
+
+              <td>
+                <span
+                  class="badge badge-observacion"
+                  th:text="${r.estado.etiqueta}"
+                >
+                </span>
+              </td>
+
+              <td>
+                <span th:text="${r.cliente.healthScore}"> </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ÚLTIMA FILA -->
+      <div class="dashboard-grid">
+        <!-- CSAT -->
+        <div class="dashboard-panel">
+          <div class="dashboard-panel-header">
+            <h2>Satisfacción de clientes</h2>
+          </div>
+
+          <div class="csat-main">
+            <div>
+              <strong class="csat-number" th:text="${csatPromedio}">
+                4.3
+              </strong>
+
+              <span>/ 5</span>
+            </div>
+
+            <div>
+              <strong>Calificación general</strong>
+
+              <p>Basada en las encuestas CSAT registradas.</p>
+            </div>
+          </div>
+
+          <div class="csat-stats">
+            <div>
+              <span>Encuestas registradas</span>
+              <strong th:text="${totalEncuestas}"> 0 </strong>
+            </div>
+
+            <div class="green-card">
+              <span>Satisfacción general</span>
+
+              <strong th:text="${satisfaccionPorcentaje + '%'}"> 0% </strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alertas -->
+        <div class="dashboard-panel">
+          <div class="dashboard-panel-header">
+            <h2>Alertas y pendientes</h2>
+          </div>
+
+          <div class="dashboard-alert danger">
+            <strong
+              th:text="${ticketMetricas.criticos
+                + ' tickets críticos'}"
+            >
+            </strong>
+
+            <span>Requieren atención prioritaria.</span>
+          </div>
+
+          <div class="dashboard-alert danger">
+            <strong
+              th:text="${clientesMetricas.enRiesgo
+                + ' clientes en riesgo'}"
+            >
+            </strong>
+
+            <span>Revisar factores de Health Score.</span>
+          </div>
+
+          <div class="dashboard-alert warning">
+            <strong
+              th:text="${renovacionMetricas.menosDe30Dias
+                + ' renovaciones próximas'}"
+            >
+            </strong>
+
+            <span>Vencen durante los próximos 30 días.</span>
+          </div>
+
+          <div class="dashboard-alert warning">
+            <strong
+              th:text="${ticketMetricas.fueraDeSla
+                + ' tickets fuera de SLA'}"
+            >
+            </strong>
+
+            <span>Requieren seguimiento.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>
