@@ -240,6 +240,90 @@ public class ClienteService {
     }
 
     @Transactional
+    public Cliente actualizarCliente(Long id, Long empresaId, ClienteDto dto) {
+        Cliente cliente = obtenerPorId(id);
+
+        Usuario responsable = null;
+        if (dto.getResponsableId() != null) {
+            responsable = usuarioRepository.findById(dto.getResponsableId()).orElse(null);
+        }
+
+        cliente.setNombreComercial(dto.getNombreComercial());
+        cliente.setRazonSocial(dto.getRazonSocial());
+        cliente.setRuc(dto.getRuc());
+        cliente.setResponsable(responsable);
+        if (dto.getLogoUrl() != null) cliente.setLogoUrl(dto.getLogoUrl());
+
+        // Actualizar servicio contratado
+        if (dto.getServicioContratado() != null && !dto.getServicioContratado().isBlank()) {
+            Empresa empresa = empresaService.obtenerPorId(empresaId);
+            String nombreServicio = dto.getServicioContratado();
+
+            Servicio servicio = servicioRepository.findByEmpresaId(empresaId).stream()
+                    .filter(s -> s.getNombre().equalsIgnoreCase(nombreServicio))
+                    .findFirst()
+                    .orElseGet(() -> servicioRepository.save(Servicio.builder()
+                            .empresa(empresa)
+                            .nombre(nombreServicio)
+                            .descripcion(nombreServicio + " para cliente")
+                            .codigo("SRV-" + Math.abs(nombreServicio.hashCode() % 10000))
+                            .estado("ACTIVO")
+                            .build()));
+
+            // Actualizar o crear ClienteServicio
+            List<ClienteServicio> serviciosActuales = clienteServicioRepository.findByClienteId(id);
+            if (!serviciosActuales.isEmpty()) {
+                ClienteServicio cs = serviciosActuales.get(0);
+                cs.setServicio(servicio);
+                if (dto.getFechaInicio() != null) cs.setFechaInicio(dto.getFechaInicio());
+                if (dto.getFechaRenovacion() != null) cs.setFechaFin(dto.getFechaRenovacion());
+                clienteServicioRepository.save(cs);
+            } else {
+                LocalDate fechaIni = dto.getFechaInicio() != null ? dto.getFechaInicio() : LocalDate.now();
+                LocalDate fechaFin = dto.getFechaRenovacion() != null ? dto.getFechaRenovacion() : LocalDate.now().plusYears(1);
+                ClienteServicio cs = ClienteServicio.builder()
+                        .cliente(cliente)
+                        .servicio(servicio)
+                        .fechaInicio(fechaIni)
+                        .fechaFin(fechaFin)
+                        .estado(EstadoServicioCliente.ACTIVO)
+                        .build();
+                clienteServicioRepository.save(cs);
+            }
+        }
+
+        return clienteRepository.save(cliente);
+    }
+
+    @Transactional
+    public void eliminarCliente(Long id) {
+        Cliente cliente = obtenerPorId(id);
+        clienteRepository.delete(cliente);
+    }
+
+    @Transactional(readOnly = true)
+    public ClienteDto toDto(Cliente cliente) {
+        ClienteDto dto = new ClienteDto();
+        dto.setId(cliente.getId());
+        dto.setNombreComercial(cliente.getNombreComercial());
+        dto.setRazonSocial(cliente.getRazonSocial());
+        dto.setRuc(cliente.getRuc());
+        dto.setLogoUrl(cliente.getLogoUrl());
+        if (cliente.getResponsable() != null) {
+            dto.setResponsableId(cliente.getResponsable().getId());
+        }
+        dto.setServicioContratado(cliente.getServicioContratado());
+        dto.setFechaInicio(cliente.getFechaInicio());
+        dto.setFechaRenovacion(cliente.getFechaRenovacion());
+        return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public List<ClienteServicio> obtenerServiciosPorCliente(Long clienteId) {
+        return clienteServicioRepository.findByClienteId(clienteId);
+    }
+
+    @Transactional
     public Contacto agregarContacto(Long clienteId, Contacto contacto) {
         Cliente cliente = obtenerPorId(clienteId);
         contacto.setCliente(cliente);

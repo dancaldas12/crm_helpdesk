@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface ServicioRepository extends JpaRepository<Servicio, Long> {
     List<Servicio> findByEmpresaId(Long empresaId);
     Optional<Servicio> findByEmpresaIdAndCodigo(Long empresaId, String codigo);
+    Optional<Servicio> findByCodigo(String codigo);
 }
