@@ -70,15 +70,15 @@ public class AuthController {
     }
 
     /**
-     * Redirige la raíz del sitio al listado de clientes.
+     * Redirige la raíz del sitio al dashboard general.
      *
-     * @return redirección a {@code /clientes}
+     * @return redirección a {@code /dashboard}
      */
-    @Operation(summary = "Raíz del sitio", description = "Redirige automáticamente al listado de clientes")
-    @ApiResponse(responseCode = "302", description = "Redirección a /clientes")
+    @Operation(summary = "Raíz del sitio", description = "Redirige automáticamente al dashboard principal")
+    @ApiResponse(responseCode = "302", description = "Redirección a /dashboard")
     @GetMapping("/")
     public String index() {
-        return "redirect:/clientes";
+        return "redirect:/dashboard";
     }
 
     /**
