@@ -1,0 +1,9 @@
+com.serviclient.crm
+com.serviclient.crm.config
+com.serviclient.crm.config.security
+com.serviclient.crm.controller
+com.serviclient.crm.dto
+com.serviclient.crm.entity
+com.serviclient.crm.entity.enums
+com.serviclient.crm.repository
+com.serviclient.crm.service

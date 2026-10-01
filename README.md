@@ -1,4 +1,4 @@
-﻿# ServiClient CRM Helpdesk
+# ServiClient CRM Helpdesk
 
 > Aplicacion web monolitica de gestion de clientes, mesa de ayuda y renovaciones.
 > **Java 21 · Spring Boot 3.3.3 · Thymeleaf · Spring Security · Spring Data JPA · MySQL 8**
@@ -144,11 +144,30 @@ Variables de entorno: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
 
 ## Ejecucion
 
-### Opcion 1 - Script rapido (Windows)
+### Opcion 1 - Script rapido automatizado (Windows)
+
+El repositorio incluye un script automatizado (`iniciar.bat`) que configura las variables de entorno de Java 21 y Maven, levanta el backend con el perfil MySQL y abre automaticamente el navegador en `http://localhost:8080`:
 
 ```bat
 iniciar.bat
 ```
+
+> **Nota:** Tambien puedes ejecutarlo desde PowerShell con:
+> ```powershell
+> .\iniciar.ps1
+> ```
+
+**Que hace el script internamente:**
+1. Configura `JAVA_HOME` apuntando al JDK 21 (`C:\Program Files\Microsoft\jdk-21.0.12.101-hotspot`) y anade Maven al `PATH`.
+2. Lanza un temporizador en segundo plano para abrir `http://localhost:8080` tras el arranque.
+3. Si existe `target\crm-helpdesk-1.0.0.jar`, ejecuta:
+   ```cmd
+   java -jar target\crm-helpdesk-1.0.0.jar --spring.profiles.active=mysql
+   ```
+4. Si no existe el empaquetado JAR, lo compila y ejecuta via Maven:
+   ```cmd
+   mvn spring-boot:run -Dspring-boot.run.profiles=mysql
+   ```
 
 ### Opcion 2 - Maven directo
 
