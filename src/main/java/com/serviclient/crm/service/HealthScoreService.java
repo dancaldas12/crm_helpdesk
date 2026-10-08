@@ -1,13 +1,13 @@
 package com.serviclient.crm.service;
 
+import com.serviclient.crm.dao.ClienteDAO;
+import com.serviclient.crm.dao.TicketDAO;
 import com.serviclient.crm.entity.Cliente;
 import com.serviclient.crm.entity.Empresa;
 import com.serviclient.crm.entity.enums.EstadoCliente;
 import com.serviclient.crm.entity.enums.EstadoTicket;
 import com.serviclient.crm.entity.enums.PrioridadTicket;
-import com.serviclient.crm.repository.ClienteRepository;
 import com.serviclient.crm.repository.EncuestaSatisfaccionRepository;
-import com.serviclient.crm.repository.TicketRepository;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -48,9 +48,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class HealthScoreService {
 
-    private final TicketRepository ticketRepository;
+    private final TicketDAO ticketDAO;
     private final EncuestaSatisfaccionRepository encuestaRepository;
-    private final ClienteRepository clienteRepository;
+    private final ClienteDAO clienteDAO;
 
     /**
      * Representa un factor de riesgo identificado durante el análisis del Health Score.

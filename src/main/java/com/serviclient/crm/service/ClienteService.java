@@ -1,5 +1,8 @@
 package com.serviclient.crm.service;
 
+import com.serviclient.crm.dao.ClienteDAO;
+import com.serviclient.crm.dao.TicketDAO;
+import com.serviclient.crm.dao.UsuarioDAO;
 import com.serviclient.crm.dto.ClienteDto;
 import com.serviclient.crm.entity.*;
 import com.serviclient.crm.entity.enums.EstadoCliente;
@@ -47,13 +50,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ClienteService {
 
-    private final ClienteRepository clienteRepository;
+    private final ClienteDAO clienteDAO;
     private final ContactoRepository contactoRepository;
     private final ServicioRepository servicioRepository;
     private final ClienteServicioRepository clienteServicioRepository;
     private final HealthScoreHistorialRepository healthScoreHistorialRepository;
-    private final UsuarioRepository usuarioRepository;
-    private final TicketRepository ticketRepository;
+    private final UsuarioDAO usuarioDAO;
+    private final TicketDAO ticketDAO;
     private final EmpresaService empresaService;
     private final HealthScoreService healthScoreService;
 
@@ -97,7 +100,7 @@ public class ClienteService {
      */
     @Transactional(readOnly = true)
     public MetricasClientes obtenerMetricas(Long empresaId) {
-        List<Cliente> todos = clienteRepository.findByEmpresaId(empresaId);
+        List<Cliente> todos = clienteDAO.findByEmpresaId(empresaId);
         long total = todos.size();
         long saludables = todos.stream().filter(c -> c.getEstadoSalud() == EstadoCliente.SALUDABLE).count();
         long observacion = todos.stream().filter(c -> c.getEstadoSalud() == EstadoCliente.OBSERVACION).count();
@@ -123,7 +126,7 @@ public class ClienteService {
      */
     @Transactional(readOnly = true)
     public Page<Cliente> listarClientes(Long empresaId, String busqueda, EstadoCliente estado, Pageable pageable) {
-        Page<Cliente> page = clienteRepository.buscarConFiltros(empresaId, busqueda, pageable);
+        Page<Cliente> page = clienteDAO.buscarConFiltros(empresaId, busqueda, pageable);
         if (estado != null) {
             List<Cliente> filtered = page.getContent().stream()
                     .filter(c -> c.getEstadoSalud() == estado)
@@ -135,19 +138,19 @@ public class ClienteService {
 
     @Transactional(readOnly = true)
     public List<Cliente> listarTodosPorEmpresa(Long empresaId) {
-        return clienteRepository.findByEmpresaId(empresaId);
+        return clienteDAO.findByEmpresaId(empresaId);
     }
 
     @Transactional(readOnly = true)
     public Cliente obtenerPorId(Long id) {
-        return clienteRepository.findById(id)
+        return clienteDAO.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado con id: " + id));
     }
 
     @Transactional(readOnly = true)
     public KpisCliente360 obtenerKpisCliente360(Cliente cliente) {
-        long abiertos = ticketRepository.countByClienteIdAndEstadoNot(cliente.getId(), EstadoTicket.CERRADO);
-        long criticos = ticketRepository.countByClienteIdAndPrioridadAndEstadoNot(
+        long abiertos = ticketDAO.countByClienteIdAndEstadoNot(cliente.getId(), EstadoTicket.CERRADO);
+        long criticos = ticketDAO.countByClienteIdAndPrioridadAndEstadoNot(
                 cliente.getId(), PrioridadTicket.CRITICA, EstadoTicket.CERRADO
         );
 
@@ -164,7 +167,7 @@ public class ClienteService {
         Empresa empresa = empresaService.obtenerPorId(empresaId);
         Usuario responsable = null;
         if (dto.getResponsableId() != null) {
-            responsable = usuarioRepository.findById(dto.getResponsableId()).orElse(null);
+            responsable = usuarioDAO.findById(dto.getResponsableId()).orElse(null);
         }
 
         Cliente cliente = Cliente.builder()
@@ -177,7 +180,7 @@ public class ClienteService {
                 .logoUrl(dto.getLogoUrl())
                 .build();
 
-        Cliente guardado = clienteRepository.save(cliente);
+        Cliente guardado = clienteDAO.save(cliente);
 
         // Crear o vincular Servicio
         String nombreServicio = (dto.getServicioContratado() != null && !dto.getServicioContratado().isBlank())
@@ -245,7 +248,7 @@ public class ClienteService {
 
         Usuario responsable = null;
         if (dto.getResponsableId() != null) {
-            responsable = usuarioRepository.findById(dto.getResponsableId()).orElse(null);
+            responsable = usuarioDAO.findById(dto.getResponsableId()).orElse(null);
         }
 
         cliente.setNombreComercial(dto.getNombreComercial());
@@ -292,13 +295,13 @@ public class ClienteService {
             }
         }
 
-        return clienteRepository.save(cliente);
+        return clienteDAO.save(cliente);
     }
 
     @Transactional
     public void eliminarCliente(Long id) {
         Cliente cliente = obtenerPorId(id);
-        clienteRepository.delete(cliente);
+        clienteDAO.delete(cliente);
     }
 
     @Transactional(readOnly = true)

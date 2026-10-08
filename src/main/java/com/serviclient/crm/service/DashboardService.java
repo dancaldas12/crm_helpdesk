@@ -1,5 +1,8 @@
 package com.serviclient.crm.service;
 
+import com.serviclient.crm.dao.ClienteDAO;
+import com.serviclient.crm.dao.TicketDAO;
+import com.serviclient.crm.dao.TicketHistorialDAO;
 import com.serviclient.crm.dto.DashboardDto;
 import com.serviclient.crm.dto.DashboardDto.ActividadItemDto;
 import com.serviclient.crm.dto.DashboardDto.AlertaItemDto;
@@ -38,12 +41,12 @@ import java.util.Locale;
 @Slf4j
 public class DashboardService {
 
-    private final ClienteRepository clienteRepository;
-    private final TicketRepository ticketRepository;
+    private final ClienteDAO clienteDAO;
+    private final TicketDAO ticketDAO;
     private final RenovacionRepository renovacionRepository;
     private final EncuestaCsatRepository encuestaCsatRepository;
     private final AuditoriaRepository auditoriaRepository;
-    private final TicketHistorialRepository ticketHistorialRepository;
+    private final TicketHistorialDAO ticketHistorialDAO;
 
     /**
      * Obtiene el DTO completo con todas las métricas del Dashboard para una empresa.
@@ -66,7 +69,7 @@ public class DashboardService {
         LocalDateTime ahora = LocalDateTime.now();
 
         // 1. Clientes y Salud
-        List<Cliente> clientes = clienteRepository.findByEmpresaId(empresaId);
+        List<Cliente> clientes = clienteDAO.findByEmpresaId(empresaId);
         long totalClientes = clientes.size();
         
         long saludables = 0;
@@ -104,7 +107,7 @@ public class DashboardService {
         double riesgoPct = totalClientes > 0 ? (enRiesgo * 100.0 / totalClientes) : 0.0;
 
         // 2. Tickets y Estados
-        List<Ticket> tickets = ticketRepository.findByEmpresaId(empresaId);
+        List<Ticket> tickets = ticketDAO.findByEmpresaId(empresaId);
         long ticketsAbiertos = 0;
         long ticketsEnProceso = 0;
         long ticketsPendientes = 0;

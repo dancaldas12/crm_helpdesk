@@ -1,5 +1,6 @@
 package com.serviclient.crm.service;
 
+import com.serviclient.crm.dao.*;
 import com.serviclient.crm.dto.TicketDto;
 import com.serviclient.crm.entity.*;
 import com.serviclient.crm.entity.enums.CategoriaTicket;
@@ -49,17 +50,17 @@ import java.util.Random;
 @RequiredArgsConstructor
 public class TicketService {
 
-    private final TicketRepository ticketRepository;
-    private final TicketMensajeRepository ticketMensajeRepository;
-    private final TicketHistorialRepository ticketHistorialRepository;
+    private final TicketDAO ticketDAO;
+    private final TicketMensajeDAO ticketMensajeDAO;
+    private final TicketHistorialDAO ticketHistorialDAO;
     private final EncuestaSatisfaccionRepository encuestaRepository;
     private final EncuestaCsatRepository encuestaCsatRepository;
     private final RespuestaCsatRepository respuestaCsatRepository;
-    private final ClienteRepository clienteRepository;
+    private final ClienteDAO clienteDAO;
     private final ContactoRepository contactoRepository;
-    private final UsuarioRepository usuarioRepository;
-    private final CategoriaTicketRepository categoriaTicketRepository;
-    private final ConfiguracionSlaRepository configuracionSlaRepository;
+    private final UsuarioDAO usuarioDAO;
+    private final CategoriaTicketDAO categoriaTicketDAO;
+    private final ConfiguracionSlaDAO configuracionSlaDAO;
     private final EmpresaService empresaService;
     private final HealthScoreService healthScoreService;
 
@@ -90,11 +91,11 @@ public class TicketService {
      */
     @Transactional(readOnly = true)
     public MetricasTickets obtenerMetricas(Long empresaId) {
-        long abiertos = ticketRepository.countByEmpresaIdAndEstado(empresaId, EstadoTicket.ABIERTO);
-        long enProceso = ticketRepository.countByEmpresaIdAndEstado(empresaId, EstadoTicket.EN_PROCESO);
-        long criticos = ticketRepository.countByEmpresaIdAndPrioridad(empresaId, PrioridadTicket.CRITICA);
-        long pendientes = ticketRepository.countByEmpresaIdAndEstado(empresaId, EstadoTicket.PENDIENTE);
-        long fueraDeSla = ticketRepository.countTicketsFueraDeSla(empresaId, LocalDateTime.now());
+        long abiertos = ticketDAO.countByEmpresaIdAndEstado(empresaId, EstadoTicket.ABIERTO);
+        long enProceso = ticketDAO.countByEmpresaIdAndEstado(empresaId, EstadoTicket.EN_PROCESO);
+        long criticos = ticketDAO.countByEmpresaIdAndPrioridad(empresaId, PrioridadTicket.CRITICA);
+        long pendientes = ticketDAO.countByEmpresaIdAndEstado(empresaId, EstadoTicket.PENDIENTE);
+        long fueraDeSla = ticketDAO.countTicketsFueraDeSla(empresaId, LocalDateTime.now());
 
         return MetricasTickets.builder()
                 .ticketsAbiertos(abiertos)
@@ -120,7 +121,7 @@ public class TicketService {
     @Transactional(readOnly = true)
     public Page<Ticket> listarTickets(Long empresaId, String busqueda, EstadoTicket estado,
                                      PrioridadTicket prioridad, CategoriaTicket categoria, Pageable pageable) {
-        Page<Ticket> page = ticketRepository.buscarConFiltros(empresaId, busqueda, estado, prioridad, pageable);
+        Page<Ticket> page = ticketDAO.buscarConFiltros(empresaId, busqueda, estado, prioridad, pageable);
         if (categoria != null) {
             List<Ticket> filtered = page.getContent().stream()
                     .filter(t -> t.getCategoria() == categoria)
@@ -139,7 +140,7 @@ public class TicketService {
      */
     @Transactional(readOnly = true)
     public Ticket obtenerPorId(Long id) {
-        return ticketRepository.findById(id)
+        return ticketDAO.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Ticket no encontrado con id: " + id));
     }
 
@@ -152,7 +153,7 @@ public class TicketService {
      */
     @Transactional(readOnly = true)
     public Ticket obtenerPorCodigo(String codigo) {
-        return ticketRepository.findByCodigo(codigo)
+        return ticketDAO.findByCodigo(codigo)
                 .orElseThrow(() -> new IllegalArgumentException("Ticket no encontrado con código: " + codigo));
     }
 
@@ -169,7 +170,7 @@ public class TicketService {
     @Transactional
     public Ticket crearTicket(Long empresaId, TicketDto dto, Usuario autor) {
         Empresa empresa = empresaService.obtenerPorId(empresaId);
-        Cliente cliente = clienteRepository.findById(dto.getClienteId())
+        Cliente cliente = clienteDAO.findById(dto.getClienteId())
                 .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado"));
 
         Contacto contacto = null;
@@ -181,7 +182,7 @@ public class TicketService {
 
         Usuario agente = null;
         if (dto.getAgenteId() != null) {
-            agente = usuarioRepository.findById(dto.getAgenteId()).orElse(null);
+            agente = usuarioDAO.findById(dto.getAgenteId()).orElse(null);
         }
 
         // Generar número de ticket TK-xxxx
@@ -189,8 +190,8 @@ public class TicketService {
 
         // Obtener o crear Categoría
         String catNombre = dto.getCategoria() != null ? dto.getCategoria().getEtiqueta() : "Soporte Técnico";
-        CategoriaTicketEntity categoriaEntity = categoriaTicketRepository.findByEmpresaIdAndNombre(empresaId, catNombre)
-                .orElseGet(() -> categoriaTicketRepository.save(CategoriaTicketEntity.builder()
+        CategoriaTicketEntity categoriaEntity = categoriaTicketDAO.findByEmpresaIdAndNombre(empresaId, catNombre)
+                .orElseGet(() -> categoriaTicketDAO.save(CategoriaTicketEntity.builder()
                         .empresa(empresa)
                         .nombre(catNombre)
                         .descripcion("Categoría " + catNombre)
@@ -203,7 +204,7 @@ public class TicketService {
         // SLA según configuración
         int minutosResp = 120;
         int minutosResol = 1440;
-        var slaConfig = configuracionSlaRepository.findByEmpresaIdAndPrioridad(empresaId, prioridad);
+        var slaConfig = configuracionSlaDAO.findByEmpresaIdAndPrioridad(empresaId, prioridad);
         if (slaConfig.isPresent()) {
             minutosResp = slaConfig.get().getTiempoRespuestaMinutos();
             minutosResol = slaConfig.get().getTiempoResolucionMinutos();
@@ -225,7 +226,7 @@ public class TicketService {
                 .slaResolucionLimite(ahora.plusMinutes(minutosResol))
                 .build();
 
-        Ticket guardado = ticketRepository.save(ticket);
+        Ticket guardado = ticketDAO.save(ticket);
 
         // Mensaje inicial en la conversación
         String remitenteNombre = (contacto != null) ? contacto.getNombreCompleto() : (autor != null ? autor.getNombreCompleto() : "Cliente");
@@ -238,7 +239,7 @@ public class TicketService {
                 .mensaje(dto.getDescripcion())
                 .createdAt(ahora)
                 .build();
-        ticketMensajeRepository.save(mensajeInicial);
+        ticketMensajeDAO.save(mensajeInicial);
 
         // Registro de auditoría
         TicketHistorial hist = TicketHistorial.builder()
@@ -248,7 +249,7 @@ public class TicketService {
                 .descripcion("Ticket creado: " + dto.getAsunto())
                 .createdAt(ahora)
                 .build();
-        ticketHistorialRepository.save(hist);
+        ticketHistorialDAO.save(hist);
 
         healthScoreService.recalcularYActualizarHealthScore(cliente);
         return guardado;
@@ -263,7 +264,7 @@ public class TicketService {
         if (!esNotaInterna && ticket.getFechaPrimeraRespuesta() == null) {
             ticket.setFechaPrimeraRespuesta(ahora);
             ticket.setEstado(EstadoTicket.EN_PROCESO);
-            ticketRepository.save(ticket);
+            ticketDAO.save(ticket);
         }
 
         TicketMensaje mensaje = TicketMensaje.builder()
@@ -275,7 +276,7 @@ public class TicketService {
                 .createdAt(ahora)
                 .build();
 
-        TicketMensaje guardado = ticketMensajeRepository.save(mensaje);
+        TicketMensaje guardado = ticketMensajeDAO.save(mensaje);
 
         // Registro de historial si es mensaje público
         if (!esNotaInterna) {
@@ -286,7 +287,7 @@ public class TicketService {
                     .descripcion(contenido.length() > 60 ? contenido.substring(0, 57) + "..." : contenido)
                     .createdAt(ahora)
                     .build();
-            ticketHistorialRepository.save(hist);
+            ticketHistorialDAO.save(hist);
         }
 
         return guardado;
@@ -295,11 +296,11 @@ public class TicketService {
     @Transactional
     public void asignarAgente(Long ticketId, Long nuevoAgenteId, Usuario autor) {
         Ticket ticket = obtenerPorId(ticketId);
-        Usuario nuevoAgente = usuarioRepository.findById(nuevoAgenteId)
+        Usuario nuevoAgente = usuarioDAO.findById(nuevoAgenteId)
                 .orElseThrow(() -> new IllegalArgumentException("Agente no encontrado"));
 
         ticket.setAgente(nuevoAgente);
-        ticketRepository.save(ticket);
+        ticketDAO.save(ticket);
 
         TicketHistorial hist = TicketHistorial.builder()
                 .ticket(ticket)
@@ -309,7 +310,7 @@ public class TicketService {
                 .descripcion("Ticket asignado a " + nuevoAgente.getNombreCompleto())
                 .createdAt(LocalDateTime.now())
                 .build();
-        ticketHistorialRepository.save(hist);
+        ticketHistorialDAO.save(hist);
     }
 
     @Transactional
@@ -332,7 +333,7 @@ public class TicketService {
                     .descripcion(comentario != null && !comentario.isBlank() ? comentario : "Actualización manual de estado")
                     .createdAt(ahora)
                     .build();
-            ticketHistorialRepository.save(hist);
+            ticketHistorialDAO.save(hist);
         }
 
         if (nuevaPrioridad != null && nuevaPrioridad != ticket.getPrioridad()) {
@@ -347,10 +348,10 @@ public class TicketService {
                     .descripcion("Ajuste de prioridad")
                     .createdAt(ahora)
                     .build();
-            ticketHistorialRepository.save(hist);
+            ticketHistorialDAO.save(hist);
         }
 
-        ticketRepository.save(ticket);
+        ticketDAO.save(ticket);
         healthScoreService.recalcularYActualizarHealthScore(ticket.getCliente());
     }
 
@@ -364,7 +365,7 @@ public class TicketService {
         if (ticket.getFechaResolucion() == null) {
             ticket.setFechaResolucion(ahora);
         }
-        ticketRepository.save(ticket);
+        ticketDAO.save(ticket);
 
         TicketHistorial hist = TicketHistorial.builder()
                 .ticket(ticket)
@@ -373,7 +374,7 @@ public class TicketService {
                 .descripcion(Boolean.TRUE.equals(enviarCsat) ? "Cierre de ticket con encuesta CSAT" : "Cierre de ticket")
                 .createdAt(ahora)
                 .build();
-        ticketHistorialRepository.save(hist);
+        ticketHistorialDAO.save(hist);
 
         if (Boolean.TRUE.equals(enviarCsat)) {
             // Guardar en tabla encuestas_csat y respuestas_csat

@@ -3,7 +3,7 @@ package com.serviclient.crm.service;
 import com.serviclient.crm.config.security.CustomUserDetails;
 import com.serviclient.crm.entity.Usuario;
 import com.serviclient.crm.entity.enums.Rol;
-import com.serviclient.crm.repository.UsuarioRepository;
+import com.serviclient.crm.dao.UsuarioDAO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,7 +17,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UsuarioService {
 
-    private final UsuarioRepository usuarioRepository;
+    private final UsuarioDAO usuarioDAO;
 
     @Transactional(readOnly = true)
     public Optional<Usuario> obtenerUsuarioAutenticado() {
@@ -26,24 +26,24 @@ public class UsuarioService {
             return Optional.empty();
         }
         if (auth.getPrincipal() instanceof CustomUserDetails userDetails) {
-            return usuarioRepository.findById(userDetails.getId());
+            return usuarioDAO.findById(userDetails.getId());
         }
-        return usuarioRepository.findByEmail(auth.getName());
+        return usuarioDAO.findByEmail(auth.getName());
     }
 
     @Transactional(readOnly = true)
     public List<Usuario> obtenerAgentesYAdminsPorEmpresa(Long empresaId) {
-        return usuarioRepository.findByEmpresaId(empresaId);
+        return usuarioDAO.findByEmpresaId(empresaId);
     }
 
     @Transactional(readOnly = true)
     public List<Usuario> obtenerTodosPorEmpresa(Long empresaId) {
-        return usuarioRepository.findByEmpresaId(empresaId);
+        return usuarioDAO.findByEmpresaId(empresaId);
     }
 
     @Transactional(readOnly = true)
     public Usuario obtenerPorId(Long id) {
-        return usuarioRepository.findById(id)
+        return usuarioDAO.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con id: " + id));
     }
 }
