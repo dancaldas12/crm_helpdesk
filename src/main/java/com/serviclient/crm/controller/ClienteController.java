@@ -12,16 +12,21 @@ import com.serviclient.crm.repository.EncuestaSatisfaccionRepository;
 import com.serviclient.crm.repository.RenovacionRepository;
 import com.serviclient.crm.service.ClienteService;
 import com.serviclient.crm.service.HealthScoreService;
+import com.serviclient.crm.service.ReporteExcelService;
 import com.serviclient.crm.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
-
 import jakarta.validation.Valid;
+import java.io.IOException;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -29,16 +34,15 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.List;
-
 /**
  * Controlador MVC para la gestión de clientes B2B.
  *
- * <p>Proporciona operaciones CRUD completas sobre la entidad {@link com.serviclient.crm.entity.Cliente}
- * y expone la vista 360° del cliente con sus KPIs, historial de tickets,
- * encuestas CSAT, renovaciones e interacciones.</p>
+ * <p>Proporciona operaciones CRUD completas sobre la entidad {@link
+ * com.serviclient.crm.entity.Cliente} y expone la vista 360° del cliente con sus KPIs, historial de
+ * tickets, encuestas CSAT, renovaciones e interacciones.
  *
- * <p><b>Rutas expuestas:</b></p>
+ * <p><b>Rutas expuestas:</b>
+ *
  * <pre>
  * GET  /clientes                    → listado paginado con filtros y métricas
  * GET  /clientes/nuevo              → formulario de alta
@@ -61,220 +65,262 @@ import java.util.List;
 @Slf4j
 public class ClienteController {
 
-    private final ClienteService clienteService;
-    private final HealthScoreService healthScoreService;
-    private final UsuarioService usuarioService;
-    private final EncuestaSatisfaccionRepository encuestaRepository;
-    private final RenovacionRepository renovacionRepository;
+  private final ClienteService clienteService;
+  private final HealthScoreService healthScoreService;
+  private final UsuarioService usuarioService;
+  private final EncuestaSatisfaccionRepository encuestaRepository;
+  private final RenovacionRepository renovacionRepository;
+  private final ReporteExcelService reporteExcelService;
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  LISTADO
-    // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  //  LISTADO
+  // ─────────────────────────────────────────────────────────────────────────
 
-    @Operation(summary = "Listar clientes",
-               description = "Obtiene el listado paginado de clientes de la empresa activa con métricas de salud y filtros.")
-    @GetMapping
-    public String listarClientes(@AuthenticationPrincipal CustomUserDetails userDetails,
-                                 @RequestParam(value = "busqueda", required = false) String busqueda,
-                                 @RequestParam(value = "estado", required = false) EstadoCliente estado,
-                                 @RequestParam(value = "page", defaultValue = "0") int page,
-                                 @RequestParam(value = "size", defaultValue = "10") int size,
-                                 Model model) {
-        Long empresaId = resolverEmpresaId(userDetails);
+  @Operation(
+      summary = "Listar clientes",
+      description =
+          "Obtiene el listado paginado de clientes de la empresa activa con métricas de salud y"
+              + " filtros.")
+  @GetMapping
+  public String listarClientes(
+      @AuthenticationPrincipal CustomUserDetails userDetails,
+      @RequestParam(value = "busqueda", required = false) String busqueda,
+      @RequestParam(value = "estado", required = false) EstadoCliente estado,
+      @RequestParam(value = "page", defaultValue = "0") int page,
+      @RequestParam(value = "size", defaultValue = "10") int size,
+      Model model) {
+    Long empresaId = resolverEmpresaId(userDetails);
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("nombreComercial").ascending());
-        Page<Cliente> clientesPage = clienteService.listarClientes(empresaId, busqueda, estado, pageable);
-        ClienteService.MetricasClientes metricas = clienteService.obtenerMetricas(empresaId);
+    Pageable pageable = PageRequest.of(page, size, Sort.by("nombreComercial").ascending());
+    Page<Cliente> clientesPage =
+        clienteService.listarClientes(empresaId, busqueda, estado, pageable);
+    ClienteService.MetricasClientes metricas = clienteService.obtenerMetricas(empresaId);
 
-        model.addAttribute("clientesPage", clientesPage);
-        model.addAttribute("metricas", metricas);
-        model.addAttribute("busqueda", busqueda);
-        model.addAttribute("estadoSeleccionado", estado);
-        model.addAttribute("estados", EstadoCliente.values());
-        model.addAttribute("activeMenu", "clientes");
+    model.addAttribute("clientesPage", clientesPage);
+    model.addAttribute("metricas", metricas);
+    model.addAttribute("busqueda", busqueda);
+    model.addAttribute("estadoSeleccionado", estado);
+    model.addAttribute("estados", EstadoCliente.values());
+    model.addAttribute("activeMenu", "clientes");
 
-        return "clientes/index";
+    return "clientes/index";
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  CREAR
+  // ─────────────────────────────────────────────────────────────────────────
+
+  @Operation(summary = "Formulario de nuevo cliente")
+  @GetMapping("/nuevo")
+  public String formularioNuevoCliente(
+      @AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
+    Long empresaId = resolverEmpresaId(userDetails);
+    List<Usuario> usuarios = usuarioService.obtenerTodosPorEmpresa(empresaId);
+
+    model.addAttribute("clienteDto", new ClienteDto());
+    model.addAttribute("usuarios", usuarios);
+    model.addAttribute("modoEdicion", false);
+    model.addAttribute("activeMenu", "clientes");
+    return "clientes/form";
+  }
+
+  @Operation(summary = "Crear nuevo cliente")
+  @PostMapping
+  public String guardarCliente(
+      @AuthenticationPrincipal CustomUserDetails userDetails,
+      @Valid @ModelAttribute("clienteDto") ClienteDto dto,
+      BindingResult bindingResult,
+      Model model,
+      RedirectAttributes redirectAttributes) {
+    Long empresaId = resolverEmpresaId(userDetails);
+
+    if (bindingResult.hasErrors()) {
+      model.addAttribute("usuarios", usuarioService.obtenerTodosPorEmpresa(empresaId));
+      model.addAttribute("modoEdicion", false);
+      model.addAttribute("activeMenu", "clientes");
+      return "clientes/form";
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  CREAR
-    // ─────────────────────────────────────────────────────────────────────────
+    try {
+      Cliente guardado = clienteService.crearCliente(empresaId, dto);
+      redirectAttributes.addFlashAttribute(
+          "successMessage",
+          "Cliente \"" + guardado.getNombreComercial() + "\" creado exitosamente.");
+      return "redirect:/clientes/" + guardado.getId();
+    } catch (Exception ex) {
+      log.error("Error al crear cliente", ex);
+      model.addAttribute("errorMessage", "Error al crear cliente: " + ex.getMessage());
+      model.addAttribute("usuarios", usuarioService.obtenerTodosPorEmpresa(empresaId));
+      model.addAttribute("modoEdicion", false);
+      model.addAttribute("activeMenu", "clientes");
+      return "clientes/form";
+    }
+  }
 
-    @Operation(summary = "Formulario de nuevo cliente")
-    @GetMapping("/nuevo")
-    public String formularioNuevoCliente(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
-        Long empresaId = resolverEmpresaId(userDetails);
-        List<Usuario> usuarios = usuarioService.obtenerTodosPorEmpresa(empresaId);
+  // ─────────────────────────────────────────────────────────────────────────
+  //  EDITAR
+  // ─────────────────────────────────────────────────────────────────────────
 
-        model.addAttribute("clienteDto", new ClienteDto());
-        model.addAttribute("usuarios", usuarios);
-        model.addAttribute("modoEdicion", false);
-        model.addAttribute("activeMenu", "clientes");
-        return "clientes/form";
+  @Operation(
+      summary = "Formulario de edición de cliente",
+      description =
+          "Carga el formulario pre-relleno con los datos actuales del cliente para su"
+              + " modificación.")
+  @GetMapping("/{id}/editar")
+  public String formularioEditarCliente(
+      @AuthenticationPrincipal CustomUserDetails userDetails,
+      @PathVariable("id") Long id,
+      Model model) {
+    Long empresaId = resolverEmpresaId(userDetails);
+    Cliente cliente = clienteService.obtenerPorId(id);
+    ClienteDto dto = clienteService.toDto(cliente);
+    List<Usuario> usuarios = usuarioService.obtenerTodosPorEmpresa(empresaId);
+
+    model.addAttribute("clienteDto", dto);
+    model.addAttribute("usuarios", usuarios);
+    model.addAttribute("modoEdicion", true);
+    model.addAttribute("clienteId", id);
+    model.addAttribute("activeMenu", "clientes");
+    return "clientes/form";
+  }
+
+  @Operation(
+      summary = "Actualizar cliente existente",
+      description = "Valida y persiste los cambios realizados sobre un cliente existente.")
+  @PostMapping("/{id}/editar")
+  public String actualizarCliente(
+      @AuthenticationPrincipal CustomUserDetails userDetails,
+      @PathVariable("id") Long id,
+      @Valid @ModelAttribute("clienteDto") ClienteDto dto,
+      BindingResult bindingResult,
+      Model model,
+      RedirectAttributes redirectAttributes) {
+    Long empresaId = resolverEmpresaId(userDetails);
+
+    if (bindingResult.hasErrors()) {
+      model.addAttribute("usuarios", usuarioService.obtenerTodosPorEmpresa(empresaId));
+      model.addAttribute("modoEdicion", true);
+      model.addAttribute("clienteId", id);
+      model.addAttribute("activeMenu", "clientes");
+      return "clientes/form";
     }
 
-    @Operation(summary = "Crear nuevo cliente")
-    @PostMapping
-    public String guardarCliente(@AuthenticationPrincipal CustomUserDetails userDetails,
-                                 @Valid @ModelAttribute("clienteDto") ClienteDto dto,
-                                 BindingResult bindingResult,
-                                 Model model,
-                                 RedirectAttributes redirectAttributes) {
-        Long empresaId = resolverEmpresaId(userDetails);
-
-        if (bindingResult.hasErrors()) {
-            model.addAttribute("usuarios", usuarioService.obtenerTodosPorEmpresa(empresaId));
-            model.addAttribute("modoEdicion", false);
-            model.addAttribute("activeMenu", "clientes");
-            return "clientes/form";
-        }
-
-        try {
-            Cliente guardado = clienteService.crearCliente(empresaId, dto);
-            redirectAttributes.addFlashAttribute("successMessage",
-                    "Cliente \"" + guardado.getNombreComercial() + "\" creado exitosamente.");
-            return "redirect:/clientes/" + guardado.getId();
-        } catch (Exception ex) {
-            log.error("Error al crear cliente", ex);
-            model.addAttribute("errorMessage", "Error al crear cliente: " + ex.getMessage());
-            model.addAttribute("usuarios", usuarioService.obtenerTodosPorEmpresa(empresaId));
-            model.addAttribute("modoEdicion", false);
-            model.addAttribute("activeMenu", "clientes");
-            return "clientes/form";
-        }
+    try {
+      Cliente actualizado = clienteService.actualizarCliente(id, empresaId, dto);
+      redirectAttributes.addFlashAttribute(
+          "successMessage",
+          "Cliente \"" + actualizado.getNombreComercial() + "\" actualizado exitosamente.");
+      return "redirect:/clientes/" + id;
+    } catch (Exception ex) {
+      log.error("Error al actualizar cliente id={}", id, ex);
+      model.addAttribute("errorMessage", "Error al actualizar: " + ex.getMessage());
+      model.addAttribute("usuarios", usuarioService.obtenerTodosPorEmpresa(empresaId));
+      model.addAttribute("modoEdicion", true);
+      model.addAttribute("clienteId", id);
+      model.addAttribute("activeMenu", "clientes");
+      return "clientes/form";
     }
+  }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  EDITAR
-    // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  //  ELIMINAR
+  // ─────────────────────────────────────────────────────────────────────────
 
-    @Operation(summary = "Formulario de edición de cliente",
-               description = "Carga el formulario pre-relleno con los datos actuales del cliente para su modificación.")
-    @GetMapping("/{id}/editar")
-    public String formularioEditarCliente(@AuthenticationPrincipal CustomUserDetails userDetails,
-                                          @PathVariable("id") Long id,
-                                          Model model) {
-        Long empresaId = resolverEmpresaId(userDetails);
-        Cliente cliente = clienteService.obtenerPorId(id);
-        ClienteDto dto = clienteService.toDto(cliente);
-        List<Usuario> usuarios = usuarioService.obtenerTodosPorEmpresa(empresaId);
-
-        model.addAttribute("clienteDto", dto);
-        model.addAttribute("usuarios", usuarios);
-        model.addAttribute("modoEdicion", true);
-        model.addAttribute("clienteId", id);
-        model.addAttribute("activeMenu", "clientes");
-        return "clientes/form";
+  @Operation(
+      summary = "Eliminar cliente",
+      description = "Elimina permanentemente el cliente y todos sus datos asociados.")
+  @PostMapping("/{id}/eliminar")
+  public String eliminarCliente(
+      @PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
+    try {
+      Cliente cliente = clienteService.obtenerPorId(id);
+      String nombre = cliente.getNombreComercial();
+      clienteService.eliminarCliente(id);
+      redirectAttributes.addFlashAttribute(
+          "successMessage", "Cliente \"" + nombre + "\" eliminado correctamente.");
+    } catch (Exception ex) {
+      log.error("Error al eliminar cliente id={}", id, ex);
+      redirectAttributes.addFlashAttribute(
+          "errorMessage", "No se pudo eliminar el cliente: " + ex.getMessage());
     }
+    return "redirect:/clientes";
+  }
 
-    @Operation(summary = "Actualizar cliente existente",
-               description = "Valida y persiste los cambios realizados sobre un cliente existente.")
-    @PostMapping("/{id}/editar")
-    public String actualizarCliente(@AuthenticationPrincipal CustomUserDetails userDetails,
-                                    @PathVariable("id") Long id,
-                                    @Valid @ModelAttribute("clienteDto") ClienteDto dto,
-                                    BindingResult bindingResult,
-                                    Model model,
-                                    RedirectAttributes redirectAttributes) {
-        Long empresaId = resolverEmpresaId(userDetails);
+  @GetMapping("/exportar-excel")
+  public ResponseEntity<byte[]> exportarClientesExcel(
+      @AuthenticationPrincipal CustomUserDetails userDetails) throws IOException {
 
-        if (bindingResult.hasErrors()) {
-            model.addAttribute("usuarios", usuarioService.obtenerTodosPorEmpresa(empresaId));
-            model.addAttribute("modoEdicion", true);
-            model.addAttribute("clienteId", id);
-            model.addAttribute("activeMenu", "clientes");
-            return "clientes/form";
-        }
+    Long empresaId = resolverEmpresaId(userDetails);
 
-        try {
-            Cliente actualizado = clienteService.actualizarCliente(id, empresaId, dto);
-            redirectAttributes.addFlashAttribute("successMessage",
-                    "Cliente \"" + actualizado.getNombreComercial() + "\" actualizado exitosamente.");
-            return "redirect:/clientes/" + id;
-        } catch (Exception ex) {
-            log.error("Error al actualizar cliente id={}", id, ex);
-            model.addAttribute("errorMessage", "Error al actualizar: " + ex.getMessage());
-            model.addAttribute("usuarios", usuarioService.obtenerTodosPorEmpresa(empresaId));
-            model.addAttribute("modoEdicion", true);
-            model.addAttribute("clienteId", id);
-            model.addAttribute("activeMenu", "clientes");
-            return "clientes/form";
-        }
+    byte[] archivo = reporteExcelService.generarReporteClientes(empresaId);
+
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=clientes_serviclient.xlsx")
+        .contentType(
+            MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+        .body(archivo);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  VISTA 360°
+  // ─────────────────────────────────────────────────────────────────────────
+
+  @Operation(
+      summary = "Vista 360° del cliente",
+      description =
+          "Carga la ficha integral del cliente: KPIs, factores de riesgo, tickets, encuestas y"
+              + " contratos.")
+  @GetMapping("/{id}")
+  public String verCliente360(
+      @PathVariable("id") Long id,
+      @RequestParam(value = "tab", defaultValue = "resumen") String tab,
+      Model model) {
+    Cliente cliente = clienteService.obtenerPorId(id);
+    ClienteService.KpisCliente360 kpis = clienteService.obtenerKpisCliente360(cliente);
+    List<HealthScoreService.FactorSalud> factores =
+        healthScoreService.obtenerFactoresRiesgo(cliente);
+    List<EncuestaSatisfaccion> encuestas = encuestaRepository.findByClienteId(id);
+    List<Renovacion> renovaciones = renovacionRepository.findByClienteId(id);
+
+    model.addAttribute("cliente", cliente);
+    model.addAttribute("kpis", kpis);
+    model.addAttribute("factores", factores);
+    model.addAttribute("encuestas", encuestas);
+    model.addAttribute("renovaciones", renovaciones);
+    model.addAttribute("activeTab", tab);
+    model.addAttribute("activeMenu", "clientes");
+
+    return "clientes/cliente360";
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  CONTACTOS
+  // ─────────────────────────────────────────────────────────────────────────
+
+  @Operation(summary = "Agregar contacto al cliente")
+  @PostMapping("/{id}/contactos")
+  public String agregarContacto(
+      @PathVariable("id") Long clienteId,
+      @ModelAttribute Contacto contacto,
+      RedirectAttributes redirectAttributes) {
+    try {
+      clienteService.agregarContacto(clienteId, contacto);
+      redirectAttributes.addFlashAttribute("successMessage", "Contacto agregado correctamente.");
+    } catch (Exception ex) {
+      redirectAttributes.addFlashAttribute(
+          "errorMessage", "Error al agregar contacto: " + ex.getMessage());
     }
+    return "redirect:/clientes/" + clienteId + "?tab=contactos";
+  }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  ELIMINAR
-    // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  //  HELPERS
+  // ─────────────────────────────────────────────────────────────────────────
 
-    @Operation(summary = "Eliminar cliente",
-               description = "Elimina permanentemente el cliente y todos sus datos asociados.")
-    @PostMapping("/{id}/eliminar")
-    public String eliminarCliente(@PathVariable("id") Long id,
-                                  RedirectAttributes redirectAttributes) {
-        try {
-            Cliente cliente = clienteService.obtenerPorId(id);
-            String nombre = cliente.getNombreComercial();
-            clienteService.eliminarCliente(id);
-            redirectAttributes.addFlashAttribute("successMessage",
-                    "Cliente \"" + nombre + "\" eliminado correctamente.");
-        } catch (Exception ex) {
-            log.error("Error al eliminar cliente id={}", id, ex);
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "No se pudo eliminar el cliente: " + ex.getMessage());
-        }
-        return "redirect:/clientes";
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  VISTA 360°
-    // ─────────────────────────────────────────────────────────────────────────
-
-    @Operation(summary = "Vista 360° del cliente",
-               description = "Carga la ficha integral del cliente: KPIs, factores de riesgo, tickets, encuestas y contratos.")
-    @GetMapping("/{id}")
-    public String verCliente360(@PathVariable("id") Long id,
-                                @RequestParam(value = "tab", defaultValue = "resumen") String tab,
-                                Model model) {
-        Cliente cliente = clienteService.obtenerPorId(id);
-        ClienteService.KpisCliente360 kpis = clienteService.obtenerKpisCliente360(cliente);
-        List<HealthScoreService.FactorSalud> factores = healthScoreService.obtenerFactoresRiesgo(cliente);
-        List<EncuestaSatisfaccion> encuestas = encuestaRepository.findByClienteId(id);
-        List<Renovacion> renovaciones = renovacionRepository.findByClienteId(id);
-
-        model.addAttribute("cliente", cliente);
-        model.addAttribute("kpis", kpis);
-        model.addAttribute("factores", factores);
-        model.addAttribute("encuestas", encuestas);
-        model.addAttribute("renovaciones", renovaciones);
-        model.addAttribute("activeTab", tab);
-        model.addAttribute("activeMenu", "clientes");
-
-        return "clientes/cliente360";
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  CONTACTOS
-    // ─────────────────────────────────────────────────────────────────────────
-
-    @Operation(summary = "Agregar contacto al cliente")
-    @PostMapping("/{id}/contactos")
-    public String agregarContacto(@PathVariable("id") Long clienteId,
-                                  @ModelAttribute Contacto contacto,
-                                  RedirectAttributes redirectAttributes) {
-        try {
-            clienteService.agregarContacto(clienteId, contacto);
-            redirectAttributes.addFlashAttribute("successMessage", "Contacto agregado correctamente.");
-        } catch (Exception ex) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Error al agregar contacto: " + ex.getMessage());
-        }
-        return "redirect:/clientes/" + clienteId + "?tab=contactos";
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  HELPERS
-    // ─────────────────────────────────────────────────────────────────────────
-
-    private Long resolverEmpresaId(CustomUserDetails userDetails) {
-        return (userDetails != null && userDetails.getEmpresaId() != null) ? userDetails.getEmpresaId() : 1L;
-    }
+  private Long resolverEmpresaId(CustomUserDetails userDetails) {
+    return (userDetails != null && userDetails.getEmpresaId() != null)
+        ? userDetails.getEmpresaId()
+        : 1L;
+  }
 }
