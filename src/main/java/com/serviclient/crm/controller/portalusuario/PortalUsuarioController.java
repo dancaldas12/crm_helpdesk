@@ -86,7 +86,7 @@ public String loginPage(
         if (Boolean.TRUE.equals(cuenta.getRequiereCambioPassword())) {
             model.addAttribute("debeCambiarPassword", true);
         } else {
-            return "redirect:/portal/tickets/nuevo";
+            return "redirect:/portal/mistickets";
         }
     }
 

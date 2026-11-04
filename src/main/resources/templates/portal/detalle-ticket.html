@@ -1,377 +1,406 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <title>Detalle del ticket - ServiClient</title>
-
-    <link rel="stylesheet" th:href="@{/css/portal.css}" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${ticket.numeroTicket + ' - Detalle del Ticket'}">TK-4005 - Detalle del Ticket</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
 </head>
+<body class="bg-slate-50 flex h-screen font-sans antialiased text-slate-800 overflow-hidden">
 
-<body>
-    <div class="portal-layout">
-        <!-- SIDEBAR -->
-        <aside class="portal-sidebar">
-            <div class="portal-brand">
-                <div class="portal-logo">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path d="M8.5 12.5l3-3a2.1 2.1 0 0 1 3 3l-4.8 4.8a4 4 0 0 1-5.7-5.6l4.9-4.9" />
-                        <path d="M15.5 11.5l-3 3a2.1 2.1 0 0 1-3-3l4.8-4.8a4 4 0 0 1 5.7 5.6l-4.9 4.9" />
-                    </svg>
+    <!-- COLUMNA IZQUIERDA: SIDEBAR OSCURA -->
+    <aside class="w-64 bg-[#0f172a] text-slate-300 flex flex-col justify-between p-4 flex-shrink-0">
+        <div>
+            <!-- Logo ServiClient con Indigo -->
+            <div class="flex items-center gap-3 px-2 py-4 mb-6 border-b border-slate-800">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-xl shadow-md shadow-indigo-600/30">
+                    <i class="fa-solid fa-tv"></i>
                 </div>
-
                 <div>
-                    <div class="portal-brand-name">ServiClient</div>
-                    <div class="portal-brand-subtitle">Portal del Cliente</div>
+                    <h1 class="text-white font-bold text-lg leading-tight">ServiClient</h1>
+                    <span class="text-xs text-slate-400" th:text="${empresaNombre}">Portal Cliente</span>
                 </div>
             </div>
 
-            <nav class="portal-menu">
-                <a th:href="@{/portal/tickets}" class="portal-menu-link active">
-                    <svg class="portal-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2">
-                        <path
-                            d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V7z" />
-
-                        <path d="M9 9h6M9 12h6M9 15h3" />
-                    </svg>
-
-                    <span>Mis tickets</span>
+            <!-- Navegación -->
+            <nav class="space-y-1">
+                <a th:href="@{/portal/mis-tickets}" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-600 text-white font-medium shadow-md shadow-indigo-600/20">
+                    <i class="fa-solid fa-ticket text-lg"></i>
+                    <span>Mis Tickets</span>
                 </a>
-
-                <a th:href="@{/portal/tickets/nuevo}" class="portal-menu-link">
-                    <svg class="portal-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2">
-                        <circle cx="12" cy="12" r="9" />
-
-                        <path d="M12 8v8M8 12h8" />
-                    </svg>
-
-                    <span>Nueva incidencia</span>
+                <a th:href="@{/portal/tickets/nuevo}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <i class="fa-solid fa-plus-circle text-lg"></i>
+                    <span>Nueva Incidencia</span>
                 </a>
             </nav>
 
-            <!-- TEMPORAL -->
-            <div class="portal-company-card">
-                <div class="portal-company-label">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M4 20h16" />
-                        <path d="M6 20V6h8v14" />
-                        <path d="M14 10h4v10" />
-                        <path d="M9 9h2M9 12h2M9 15h2" />
-                    </svg>
-
-                    <span>Tu empresa</span>
+            <!-- Tarjeta Empresa -->
+            <div class="mt-8 p-3 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
+                <div class="flex items-center gap-2 text-[11px] font-bold tracking-wider text-indigo-400 uppercase">
+                    <i class="fa-solid fa-building text-xs"></i>
+                    <span>Tu Empresa</span>
                 </div>
+                <p class="text-xs font-bold text-white truncate" th:text="${empresaNombre}">Global Logistics del Perú S.A.</p>
+                <p class="text-[10px] text-slate-400">Portal de Atención</p>
+            </div>
+        </div>
 
-                <div class="portal-company-name" th:text="${ticket.cliente.nombreComercial}">
-                    NovaTech Industries
+        <!-- Cierre de sesión y Perfil Inferior -->
+        <div class="space-y-2 border-t border-slate-800 pt-4">
+            <div class="flex items-center justify-between px-2 py-1">
+                <div class="flex items-center gap-2.5 overflow-hidden">
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center flex-shrink-0"
+                         th:text="${usuarioIniciales}">MV</div>
+                    <div class="overflow-hidden">
+                        <p class="text-xs font-bold text-white truncate" th:text="${usuarioNombre}">Mariana Vargas</p>
+                    </div>
                 </div>
+                <form th:action="@{/portalusuario/logout}" method="post">
+                    <button type="submit" title="Cerrar Sesión" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition">
+                        <i class="fa-solid fa-arrow-right-from-bracket text-sm"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </aside>
 
-                <div class="portal-company-plan" th:text="${ticket.cliente.servicioContratado}">
-                    Plan SaaS Enterprise
-                </div>
+    <!-- ÁREA PRINCIPAL CON CONTENIDO Y SCROLL -->
+    <div class="flex-1 flex flex-col overflow-y-auto">
+
+        <!-- BARRA SUPERIOR (HEADER) -->
+        <header class="h-16 bg-white border-b border-slate-200 sticky top-0 z-30 px-8 flex items-center justify-between flex-shrink-0">
+            <!-- Breadcrumbs -->
+            <div class="flex items-center gap-2 text-sm text-slate-500">
+                <a th:href="@{/portal/mis-tickets}" class="hover:text-slate-800 transition">Inicio</a>
+                <span>/</span>
+                <a th:href="@{/portal/mis-tickets}" class="hover:text-slate-800 transition">Mis tickets</a>
+                <span>/</span>
+                <span class="font-bold text-slate-900" th:text="${ticket.numeroTicket}">TK-4005</span>
             </div>
 
-            <div class="portal-user">
-                <div class="portal-user-card">
-                    <div class="portal-avatar" th:text="${ticket.contacto != null ? ticket.contacto.iniciales : 'CL'}">
-                        LM
-                    </div>
-
-                    <div>
-                        <div class="portal-user-name"
-                            th:text="${ticket.contacto != null ? ticket.contacto.nombreCompleto : 'Cliente'}">
-                            Laura Méndez
-                        </div>
-
-                        <div class="portal-user-email"
-                            th:text="${ticket.contacto != null ? ticket.contacto.email : ''}">
-                            laura@novatech.com
-                        </div>
-                    </div>
+            <!-- Botón Volver y Perfil -->
+            <div class="flex items-center gap-6">
+                <a th:href="@{/portal/mis-tickets}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-2 transition">
+                    <i class="fa-solid fa-arrow-left text-xs"></i>
+                    <span>Volver a Mis tickets</span>
+                </a>
+                <div class="flex items-center gap-3 pl-4 border-l border-slate-200">
+                    <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center shadow-sm"
+                         th:text="${usuarioIniciales}">MV</div>
+                    <span class="text-sm font-semibold text-slate-800" th:text="${usuarioNombre}">Mariana Vargas</span>
                 </div>
             </div>
-        </aside>
+        </header>
 
-        <main class="portal-main">
-            <!-- TOPBAR -->
-            <header class="portal-topbar">
-                <div class="portal-breadcrumb">
-                    Inicio / Mis tickets /
-                    <strong th:text="${ticket.codigo}"> TK-4029 </strong>
-                </div>
+        <!-- CONTENIDO DEL TICKET -->
+        <main class="p-8 max-w-7xl mx-auto w-full space-y-6">
 
-                <div class="portal-top-actions">
-                    <a th:href="@{/portal/tickets}" class="back-tickets-link">
-                        ← Volver a Mis tickets
-                    </a>
+            <!-- CABECERA DEL TICKET (TARJETA BLANCA SUPERIOR) -->
+            <section class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div class="space-y-3">
+                    <!-- Badges / Tags -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200"
+                              th:text="${ticket.numeroTicket}">TK-4005</span>
 
-                    <div class="topbar-separator"></div>
-
-                    <div class="topbar-user">
-                        <div class="topbar-avatar"
-                            th:text="${ticket.contacto != null ? ticket.contacto.iniciales : 'CL'}">
-                            LM
-                        </div>
-
-                        <strong th:text="${ticket.contacto != null ? ticket.contacto.nombreCompleto : 'Cliente'}">
-                            Laura Méndez
-                        </strong>
-                    </div>
-                </div>
-            </header>
-
-            <div class="portal-detail-content">
-                <!-- CABECERA -->
-                <section class="ticket-header-card">
-                    <div class="ticket-header-top">
-                        <div>
-                            <div class="ticket-badges">
-                                <span class="ticket-code" th:text="${ticket.codigo}">
-                                    TK-4029
-                                </span>
-
-                                <span class="ticket-status">
-                                    <span class="status-dot"></span>
-
-                                    <span th:text="${ticket.estado.etiqueta}">
-                                        En proceso
-                                    </span>
-                                </span>
-
-                                <span class="ticket-priority">
-                                    !
-                                    <span th:text="${ticket.prioridad.etiqueta}"> Alta </span>
-                                </span>
-
-                                <span class="ticket-category">
-                                    Categoría:
-                                    <span th:text="${ticket.categoria.etiqueta}">
-                                        Soporte técnico
-                                    </span>
-                                </span>
-                            </div>
-
-                            <h1 th:text="${ticket.asunto}">Error al acceder al sistema</h1>
-                        </div>
-
-                        <div class="support-attended">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z" />
-                                <path d="M9 12l2 2 4-4" />
-                            </svg>
-
-                            <span>Atendido por soporte ServiClient</span>
-                        </div>
-                    </div>
-
-                    <div class="ticket-meta">
-                        <span>
-                            Creado:
-                            <strong th:text="${#temporals.format(ticket.fechaCreacion, 'dd MMM yyyy HH:mm')}">
-                                12 Nov 2026 09:41
-                            </strong>
+                        <!-- Estado Dinámico -->
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5"
+                              th:classappend="${ticket.estado != null ? ticket.estado.cssClass : 'badge-status-open'}">
+                            <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                            <span th:text="${ticket.estado != null ? ticket.estado.etiqueta : 'Abierto'}">Resuelto</span>
                         </span>
 
-                        <span>•</span>
-
-                        <span>
-                            Reportado por:
-                            <strong th:text="${ticket.contacto != null ? ticket.contacto.nombreCompleto : 'Cliente'}">
-                                Laura Méndez
-                            </strong>
+                        <!-- Urgencia / Prioridad Dinámica -->
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1"
+                              th:classappend="${ticket.prioridad != null ? ticket.prioridad.cssClass : 'badge-priority-medium'}">
+                            <span class="font-bold">!</span>
+                            <span th:text="${'Urgencia ' + (ticket.prioridad != null ? ticket.prioridad.etiqueta : 'Media')}">Urgencia Media</span>
                         </span>
+
+                        <!-- Categoría -->
+                        <span class="px-2.5 py-1 rounded-full text-xs font-medium text-slate-600 bg-slate-100 border border-slate-200"
+                              th:text="${'Categoría: ' + (ticket.categoriaEntity != null ? ticket.categoriaEntity.nombre : 'Facturación & Cobranzas')}">Categoría: Facturación & Cobranzas</span>
                     </div>
-                </section>
 
-                <div class="portal-detail-grid">
-                    <!-- CONVERSACION -->
-                    <section class="conversation-card">
-                        <div class="conversation-header">
-                            <h3>Conversación con soporte</h3>
+                    <!-- Título Asunto -->
+                    <h1 class="text-2xl font-bold text-slate-900 tracking-tight" th:text="${ticket.asunto}">Actualización de razón social en comprobantes fiscales</h1>
 
-                            <span th:text="${ticket.mensajes.size()} + ' mensajes'">
-                                2 mensajes
-                            </span>
-                        </div>
-
-                        <div class="conversation-body">
-                            <div th:each="mensaje : ${ticket.mensajes}" th:if="${!mensaje.esNotaInterna}"
-                                class="message-row" th:classappend="${mensaje.esAgente} ? ' agent-row' : ' client-row'">
-                                <!-- Avatar del cliente -->
-                                <div th:if="${!mensaje.esAgente}" class="message-avatar client-avatar"
-                                    th:text="${mensaje.iniciales}">
-                                    LM
-                                </div>
-
-                                <div class="message-content">
-                                    <div class="message-author"
-                                        th:classappend="${mensaje.esAgente} ? ' agent-author' : ''">
-                                        <strong th:text="${mensaje.remitenteNombre}">
-                                            Laura Méndez
-                                        </strong>
-
-                                        <span th:if="${!mensaje.esAgente}" class="you-badge">
-                                            Tú
-                                        </span>
-
-                                        <span th:if="${mensaje.esAgente}" class="message-role">
-                                            Agente de Soporte
-                                        </span>
-
-                                        <span
-                                            th:text="${#temporals.format(mensaje.fechaCreacion, 'dd MMM yyyy • HH:mm')}">
-                                            12 Nov 2026 • 09:41
-                                        </span>
-                                    </div>
-
-                                    <div class="message-bubble" th:text="${mensaje.contenido}">
-                                        Mensaje
-                                    </div>
-                                </div>
-
-                                <!-- Avatar del agente -->
-                                <div th:if="${mensaje.esAgente}" class="message-avatar agent-avatar"
-                                    th:text="${mensaje.iniciales}">
-                                    CR
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- RESPUESTA -->
-                        <div class="portal-reply-box">
-                            <textarea placeholder="Escribe una respuesta para el equipo de soporte..."></textarea>
-
-                            <div class="portal-reply-actions">
-                                <button type="button" class="portal-btn portal-btn-secondary">
-                                    📎 Adjuntar archivo
-                                </button>
-
-                                <button type="button" class="portal-btn portal-btn-primary">
-                                    Enviar ➤
-                                </button>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- COLUMNA DERECHA -->
-                    <aside class="ticket-info-column">
-                        <!-- INFO -->
-                        <div class="ticket-info-card">
-                            <h3>Información del ticket</h3>
-
-                            <div class="info-row">
-                                <span>Número</span>
-                                <strong th:text="${ticket.codigo}"> TK-4029 </strong>
-                            </div>
-
-                            <div class="info-row">
-                                <span>Estado</span>
-                                <strong th:text="${ticket.estado.etiqueta}">
-                                    En proceso
-                                </strong>
-                            </div>
-
-                            <div class="info-row">
-                                <span>Categoría</span>
-                                <strong th:text="${ticket.categoria.etiqueta}">
-                                    Soporte técnico
-                                </strong>
-                            </div>
-
-                            <div class="info-row">
-                                <span>Nivel de urgencia</span>
-                                <strong th:text="${ticket.prioridad.etiqueta}"> Alta </strong>
-                            </div>
-
-                            <div class="info-row">
-                                <span>Agente asignado</span>
-                                <strong
-                                    th:text="${ticket.agente != null ? ticket.agente.nombreCompleto : 'Pendiente de asignación'}">
-                                    Carlos R.
-                                </strong>
-                            </div>
-
-                            <div class="info-row">
-                                <span>Fecha creación</span>
-                                <strong th:text="${#temporals.format(ticket.fechaCreacion, 'dd MMM yyyy HH:mm')}">
-                                    12 Nov 2026
-                                </strong>
-                            </div>
-                        </div>
-
-                        <!-- ADJUNTOS -->
-                        <div class="ticket-info-card">
-                            <h3>
-                                Archivos adjuntos (<span th:text="${ticket.adjuntos.size()}">0</span>)
-                            </h3>
-
-                            <div th:if="${ticket.adjuntos.isEmpty()}" class="empty-box">
-                                No hay archivos adjuntos.
-                            </div>
-
-                            <div th:each="adjunto : ${ticket.adjuntos}" class="attachment-row">
-                                <div class="attachment-icon">📄</div>
-
-                                <div class="attachment-info">
-                                    <strong th:text="${adjunto.nombreArchivo}">
-                                        error_log.txt
-                                    </strong>
-
-                                    <small th:text="${#numbers.formatDecimal(adjunto.tamano / 1024.0, 1, 0)} + ' KB'">
-                                        18 KB
-                                    </small>
-                                </div>
-
-                                <button type="button" class="attachment-download" title="Descargar">
-                                    ↓
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- HISTORIAL -->
-                        <div class="ticket-info-card">
-                            <h3>Historial del ticket</h3>
-
-                            <div class="history-timeline">
-                                <div th:each="evento : ${ticket.historial}" class="history-item" th:classappend="${
-             evento.tipoEvento == 'RESPUESTA' ? ' history-response' :
-             evento.tipoEvento == 'ESTADO' ? ' history-status' :
-             evento.tipoEvento == 'ASIGNACION' ? ' history-assignment' :
-             ' history-created'
-         }">
-                                    <span class="history-dot"></span>
-
-                                    <div class="history-content">
-                                        <strong th:text="${
-                evento.tipoEvento == 'RESPUESTA' ? 'Respuesta enviada por soporte' :
-                evento.tipoEvento == 'ESTADO' ? 'Estado actualizado' :
-                evento.tipoEvento == 'ASIGNACION' ? 'Ticket asignado' :
-                evento.tipoEvento == 'CREACION' ? 'Ticket creado' :
-                evento.tipoEvento
-            }">
-                                            Ticket creado
-                                        </strong>
-
-                                        <p th:text="${evento.detalle}">Detalle del evento</p>
-
-                                        <small
-                                            th:text="${#temporals.format(evento.fechaCreacion, 'dd MMM yyyy • HH:mm')}">
-                                            12 Nov 2026 • 09:41
-                                        </small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </aside>
+                    <!-- Metadatos de Creación y Reporte -->
+                    <p class="text-xs text-slate-500">
+                        <span>Creado el: </span>
+                        <span class="text-slate-700 font-medium" 
+                              th:text="${ticket.createdAt != null ? (#temporals.format(ticket.createdAt, 'dd MMM, yyyy') + ' a las ' + #temporals.format(ticket.createdAt, 'hh:mm a')) : '19 Oct, 2026 a las 03:16 PM'}">19 Oct, 2026 a las 03:16 PM</span>
+                        <span class="mx-2 font-bold text-slate-300">•</span>
+                        <span>Reportado por: </span>
+                        <span class="text-slate-700 font-medium" 
+                              th:text="${ticket.contacto != null ? ticket.contacto.nombreCompleto + ' (' + (ticket.cliente != null ? ticket.cliente.nombreComercial : 'Global Logistics SA') + ')' : (usuarioNombre + ' (' + empresaNombre + ')')}">Mariana Vargas (Global Logistics SA)</span>
+                    </p>
                 </div>
+
+                <!-- Sello ServiClient en Índigo -->
+                <div class="flex-shrink-0 self-start md:self-auto">
+                    <div class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold">
+                        <i class="fa-solid fa-shield-halved text-indigo-600"></i>
+                        <span>Atendido por soporte ServiClient</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECCIÓN DE DOS COLUMNAS -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+                <!-- COLUMNA IZQUIERDA: CONVERSACIÓN CON SOPORTE -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+                        
+                        <!-- Header Conversación -->
+                        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <span class="text-indigo-600 text-base"><i class="fa-regular fa-comments"></i></span>
+                                <h2 class="text-sm font-bold text-slate-900">Conversación con soporte</h2>
+                            </div>
+                            <span class="text-xs text-slate-400" 
+                                  th:text="${(ticket.mensajes != null ? ticket.mensajes.size() : 0) + ' mensajes intercambiados'}">0 mensajes intercambiados</span>
+                        </div>
+
+                        <!-- Mensajes -->
+                        <div class="p-6 space-y-6">
+                            
+                            <!-- Descripción inicial como primer mensaje si la lista de mensajes está vacía -->
+                            <div th:if="${#lists.isEmpty(ticket.mensajes)}" class="flex items-start gap-3.5">
+                                <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center flex-shrink-0"
+                                     th:text="${usuarioIniciales}">MV</div>
+                                <div class="space-y-1.5 flex-1 max-w-xl">
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="font-bold text-slate-800" th:text="${usuarioNombre}">Mariana Vargas</span>
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">Tú</span>
+                                        <span class="text-slate-400 font-medium" 
+                                              th:text="${ticket.createdAt != null ? (#temporals.format(ticket.createdAt, 'dd MMM, yyyy') + ' • ' + #temporals.format(ticket.createdAt, 'hh:mm a')) : '19 Oct, 2026 • 03:16 PM'}">19 Oct, 2026 • 03:16 PM</span>
+                                    </div>
+                                    <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-sm p-4 text-sm text-slate-700 leading-relaxed shadow-sm"
+                                         th:text="${ticket.descripcion}">
+                                        Se solicita actualizar la dirección fiscal en la plantilla de facturas emitidas.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Renderizado de mensajes registrados -->
+                            <th:block th:each="msg : ${ticket.mensajes}">
+                                <!-- Mensaje del Cliente -->
+                                <div th:if="${msg.tipo != null and msg.tipo.name() == 'CLIENTE'}" class="flex items-start gap-3.5">
+                                    <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center flex-shrink-0"
+                                         th:text="${msg.iniciales}">MV</div>
+                                    <div class="space-y-1.5 flex-1 max-w-xl">
+                                        <div class="flex items-center gap-2 text-xs">
+                                            <span class="font-bold text-slate-800" th:text="${msg.remitenteNombre}">Mariana Vargas</span>
+                                            <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">Tú</span>
+                                            <span class="text-slate-400 font-medium" 
+                                                  th:text="${#temporals.format(msg.createdAt, 'dd MMM, yyyy') + ' • ' + #temporals.format(msg.createdAt, 'hh:mm a')}">19 Oct, 2026 • 03:16 PM</span>
+                                        </div>
+                                        <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-sm p-4 text-sm text-slate-700 leading-relaxed shadow-sm"
+                                             th:text="${msg.mensaje}">
+                                            Mensaje del cliente...
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Mensaje del Agente de Soporte (burbuja índigo) -->
+                                <div th:if="${msg.tipo != null and msg.tipo.name() == 'AGENTE'}" class="flex flex-col items-end gap-1.5">
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="text-slate-400 font-medium" 
+                                              th:text="${#temporals.format(msg.createdAt, 'dd MMM, yyyy') + ' • ' + #temporals.format(msg.createdAt, 'hh:mm a')}">19 Oct, 2026 • 03:25 PM</span>
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Agente de Soporte</span>
+                                        <span class="font-bold text-slate-900" th:text="${msg.remitenteNombre + ' (ServiClient)'}">Ana Silva (ServiClient)</span>
+                                        <div class="w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 ml-1"
+                                             th:text="${msg.iniciales}">AS</div>
+                                    </div>
+                                    <div class="max-w-xl bg-indigo-600 text-white rounded-2xl rounded-tr-sm p-4 text-sm leading-relaxed shadow-md shadow-indigo-600/10"
+                                         th:text="${msg.mensaje}">
+                                        Respuesta del agente...
+                                    </div>
+                                </div>
+                            </th:block>
+
+                            <!-- Evento de cambio de estado -->
+                            <div class="flex justify-center my-4">
+                                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs text-slate-600 font-medium">
+                                    <i class="fa-solid fa-arrows-left-right text-slate-400"></i>
+                                    <span th:text="${(ticket.agente != null ? ticket.agente.nombreCompleto : 'Ana Silva') + ' cambió el estado a: '}">Ana Silva cambió el estado a:</span>
+                                    <span class="font-bold text-slate-800" th:text="${ticket.estado != null ? ticket.estado.etiqueta : 'Resuelto'}">Resuelto</span>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- CAJA DE TEXTO PARA RESPONDER -->
+                        <div class="p-6 border-t border-slate-100 bg-white rounded-b-2xl">
+                            <form th:action="@{'/portal/tickets/' + ${ticket.id} + '/mensajes'}" method="post" class="space-y-4">
+                                <div class="border border-slate-200 rounded-2xl focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-100 transition p-3 bg-white">
+                                    <textarea name="contenido" rows="3" required
+                                              placeholder="Escribe una respuesta para el equipo de soporte..."
+                                              class="w-full text-sm outline-none resize-none placeholder-slate-400 text-slate-800"></textarea>
+                                    
+                                    <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                                        <button type="button" class="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-slate-100 transition">
+                                            <i class="fa-solid fa-paperclip text-slate-400"></i>
+                                            <span>Adjuntar archivo</span>
+                                        </button>
+                                        <button type="submit" class="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-600/20 transition">
+                                            <span>Enviar</span>
+                                            <i class="fa-solid fa-paper-plane text-[10px]"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COLUMNA DERECHA: PANELES LATERALES -->
+                <div class="space-y-6">
+
+                    <!-- 1. INFORMACIÓN DEL TICKET -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+                        <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
+                            <i class="fa-solid fa-circle-info text-indigo-600 text-sm"></i>
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">Información del ticket</h3>
+                        </div>
+
+                        <dl class="space-y-3.5 text-xs">
+                            <div class="flex items-center justify-between">
+                                <dt class="text-slate-400 font-medium">Número</dt>
+                                <dd class="font-bold text-indigo-600" th:text="${ticket.numeroTicket}">TK-4005</dd>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <dt class="text-slate-400 font-medium">Estado</dt>
+                                <dd>
+                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                                          th:classappend="${ticket.estado != null ? ticket.estado.cssClass : 'badge-status-resolved'}"
+                                          th:text="${ticket.estado != null ? ticket.estado.etiqueta : 'Resuelto'}">Resuelto</span>
+                                </dd>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <dt class="text-slate-400 font-medium">Categoría</dt>
+                                <dd class="font-semibold text-slate-800" th:text="${ticket.categoriaEntity != null ? ticket.categoriaEntity.nombre : 'Facturación & Cobranzas'}">Facturación & Cobranzas</dd>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <dt class="text-slate-400 font-medium">Nivel de urgencia</dt>
+                                <dd class="font-semibold text-slate-800 flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                    <span th:text="${ticket.prioridad != null ? ticket.prioridad.etiqueta : 'Media'}">Media</span>
+                                </dd>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <dt class="text-slate-400 font-medium">Agente asignado</dt>
+                                <dd class="flex items-center gap-1.5 font-semibold text-slate-800">
+                                    <span class="w-5 h-5 rounded-full bg-slate-900 text-white font-bold text-[9px] flex items-center justify-center"
+                                          th:text="${ticket.agente != null ? ticket.agente.iniciales : 'AS'}">AS</span>
+                                    <span th:text="${ticket.agente != null ? ticket.agente.nombreCompleto : 'Ana Silva'}">Ana Silva</span>
+                                </dd>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <dt class="text-slate-400 font-medium">Fecha de creación</dt>
+                                <dd class="font-semibold text-slate-800"
+                                    th:text="${ticket.createdAt != null ? (#temporals.format(ticket.createdAt, 'dd MMM, yyyy') + ' • ' + #temporals.format(ticket.createdAt, 'HH:mm')) : '19 Oct, 2026 • 15:16'}">19 Oct, 2026 • 15:16</dd>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <dt class="text-slate-400 font-medium">Última actualización</dt>
+                                <dd class="font-semibold text-slate-800">Hace 2 horas</dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <!-- 2. ARCHIVOS ADJUNTOS -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+                        <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
+                            <i class="fa-solid fa-folder-open text-indigo-600 text-sm"></i>
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900" 
+                                th:text="${'Archivos adjuntos (' + (ticket.adjuntos != null ? ticket.adjuntos.size() : 0) + ')'}">Archivos adjuntos (0)</h3>
+                        </div>
+
+                        <div class="space-y-2.5">
+                            <div th:if="${#lists.isEmpty(ticket.adjuntos)}" class="py-6 text-center text-slate-400 text-xs">
+                                <i class="fa-regular fa-folder-open text-2xl mb-1 block text-slate-300"></i>
+                                No hay archivos adjuntos en este ticket.
+                            </div>
+
+                            <div th:each="adj : ${ticket.adjuntos}" class="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-indigo-300 transition group bg-slate-50/50">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                                        <i class="fa-regular fa-file"></i>
+                                    </div>
+                                    <div class="space-y-0.5">
+                                        <p class="text-xs font-bold text-slate-800 group-hover:text-indigo-600 transition truncate max-w-[150px]" th:text="${adj.nombreArchivo}">archivo.pdf</p>
+                                        <p class="text-[10px] text-slate-400" th:text="${adj.tamano != null ? (adj.tamano / 1024) + ' KB' : 'Adjunto'}">24 KB</p>
+                                    </div>
+                                </div>
+                                <a th:href="${adj.urlArchivo}" target="_blank" class="text-slate-400 hover:text-slate-700 p-1">
+                                    <i class="fa-solid fa-download text-xs"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. HISTORIAL DEL TICKET -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+                        <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
+                            <i class="fa-solid fa-clock-rotate-left text-indigo-600 text-sm"></i>
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">Historial del ticket</h3>
+                        </div>
+
+                        <div class="relative pl-5 space-y-5 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                            <div class="relative">
+                                <span class="absolute -left-5 top-1 w-2.5 h-2.5 rounded-full bg-indigo-600 ring-4 ring-white"></span>
+                                <div class="text-xs space-y-0.5">
+                                    <p class="font-bold text-slate-900">Respuesta enviada por soporte</p>
+                                    <p class="text-slate-500 text-[11px]">Ana Silva indicó actualización en plantilla</p>
+                                    <p class="text-slate-400 text-[10px]">19 Oct, 2026 • 03:25 PM</p>
+                                </div>
+                            </div>
+
+                            <div class="relative">
+                                <span class="absolute -left-5 top-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-white"></span>
+                                <div class="text-xs space-y-0.5">
+                                    <p class="font-bold text-slate-900">Estado actualizado</p>
+                                    <p class="text-slate-500 text-[11px]">Cambiado a <span class="font-semibold text-emerald-700">Resuelto</span></p>
+                                    <p class="text-slate-400 text-[10px]">19 Oct, 2026 • 03:25 PM</p>
+                                </div>
+                            </div>
+
+                            <div class="relative">
+                                <span class="absolute -left-5 top-1 w-2.5 h-2.5 rounded-full bg-slate-400 ring-4 ring-white"></span>
+                                <div class="text-xs space-y-0.5">
+                                    <p class="font-bold text-slate-900">Ticket asignado</p>
+                                    <p class="text-slate-500 text-[11px]">Asignado a agente Ana Silva</p>
+                                    <p class="text-slate-400 text-[10px]">19 Oct, 2026 • 03:20 PM</p>
+                                </div>
+                            </div>
+
+                            <div class="relative">
+                                <span class="absolute -left-5 top-1 w-2.5 h-2.5 rounded-full bg-indigo-500 ring-4 ring-white"></span>
+                                <div class="text-xs space-y-0.5">
+                                    <p class="font-bold text-slate-900">Ticket creado</p>
+                                    <p class="text-slate-500 text-[11px]" th:text="${'Creado por ' + (ticket.contacto != null ? ticket.contacto.nombreCompleto : usuarioNombre) + ' desde el Portal'}">Creado por Mariana Vargas desde el Portal</p>
+                                    <p class="text-slate-400 text-[10px]" 
+                                       th:text="${ticket.createdAt != null ? (#temporals.format(ticket.createdAt, 'dd MMM, yyyy') + ' • ' + #temporals.format(ticket.createdAt, 'hh:mm a')) : '19 Oct, 2026 • 03:16 PM'}">19 Oct, 2026 • 03:16 PM</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
             </div>
+
         </main>
     </div>
-</body>
 
+</body>
 </html>

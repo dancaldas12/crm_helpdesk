@@ -1,352 +1,213 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportar Incidencia - ServiClient</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 flex h-screen font-sans antialiased text-slate-800 overflow-hidden">
 
-    <title>Nueva incidencia - ServiClient</title>
-
-    <link rel="stylesheet" th:href="@{/css/portal.css}" />
-  </head>
-
-  <body>
-    <div class="portal-layout">
-      <!-- SIDEBAR -->
-      <aside class="portal-sidebar">
-        <div class="portal-brand">
-          <div class="portal-logo">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path
-                d="M8.5 12.5l3-3a2.1 2.1 0 0 1 3 3l-4.8 4.8a4 4 0 0 1-5.7-5.6l4.9-4.9"
-              />
-              <path
-                d="M15.5 11.5l-3 3a2.1 2.1 0 0 1-3-3l4.8-4.8a4 4 0 0 1 5.7 5.6l-4.9 4.9"
-              />
-            </svg>
-          </div>
-
-          <div>
-            <div class="portal-brand-name">ServiClient</div>
-            <div class="portal-brand-subtitle">Portal del Cliente</div>
-          </div>
-        </div>
-
-        <nav class="portal-menu">
-          <a th:href="@{/portal/tickets}" class="portal-menu-link">
-            <svg
-              class="portal-menu-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V7z"
-              />
-              <path d="M9 9h6M9 12h6M9 15h3" />
-            </svg>
-
-            <span>Mis tickets</span>
-          </a>
-
-          <a th:href="@{/portal/tickets/nuevo}" class="portal-menu-link active">
-            <svg
-              class="portal-menu-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 8v8M8 12h8" />
-            </svg>
-
-            <span>Nueva incidencia</span>
-          </a>
-        </nav>
-
-        <!-- INFORMACIÓN DINÁMICA DE LA EMPRESA -->
-        <div class="portal-company-card">
-          <div class="portal-company-label">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M4 20h16" />
-              <path d="M6 20V6h8v14" />
-              <path d="M14 10h4v10" />
-              <path d="M9 9h2M9 12h2M9 15h2" />
-            </svg>
-
-            <span>Tu empresa</span>
-          </div>
-
-          <div class="portal-company-name" th:text="${empresaNombre != null ? empresaNombre : 'Mi Empresa'}">NovaTech Industries</div>
-
-          <div class="portal-company-plan">Portal de Atención</div>
-        </div>
-
-        <!-- INFORMACIÓN DINÁMICA DEL USUARIO EN SIDEBAR -->
-        <div class="portal-user">
-          <div class="portal-user-card" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
-              <div class="portal-avatar" th:text="${usuarioIniciales != null ? usuarioIniciales : 'U'}" style="flex-shrink: 0;">LM</div>
-
-              <div style="min-width: 0; overflow: hidden;">
-                <div class="portal-user-name" th:text="${usuarioNombre != null ? usuarioNombre : #authentication.name}" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Laura Méndez</div>
-
-                <div class="portal-user-email" th:text="${#authentication.name}" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">laura@novatech.com</div>
-              </div>
+    <!-- BARRA LATERAL (SIDEBAR) -->
+    <aside class="w-64 bg-[#0f172a] text-slate-300 flex flex-col justify-between p-4 flex-shrink-0">
+        <div>
+            <!-- Logo ServiClient con Indigo -->
+            <div class="flex items-center gap-3 px-2 py-4 mb-6 border-b border-slate-800">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-xl shadow-md shadow-indigo-600/30">
+                    <i class="fa-solid fa-tv"></i>
+                </div>
+                <div>
+                    <h1 class="text-white font-bold text-lg leading-tight">ServiClient</h1>
+                    <span class="text-xs text-slate-400" th:text="${empresaNombre}">Portal Cliente</span>
+                </div>
             </div>
 
-            <!-- BOTÓN CERRAR SESIÓN -->
-            <form th:action="@{/logout}" method="post" style="margin: 0;">
-              <button type="submit" title="Cerrar sesión" style="background: transparent; border: none; cursor: pointer; color: #94a3b8; padding: 6px; border-radius: 8px; display: flex; align-items: center; justify-content: center;"
-                      onmouseover="this.style.color='#ef4444'; this.style.backgroundColor='rgba(239,68,68,0.1)'" 
-                      onmouseout="this.style.color='#94a3b8'; this.style.backgroundColor='transparent'">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                  <polyline points="16 17 21 12 16 7"></polyline>
-                  <line x1="21" y1="12" x2="9" y2="12"></line>
-                </svg>
-              </button>
-            </form>
-          </div>
+            <!-- Navegación con botón activo en Indigo -->
+            <nav class="space-y-1">
+                <a th:href="@{/portal/mis-tickets}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <i class="fa-solid fa-ticket text-lg"></i>
+                    <span>Mis tickets</span>
+                </a>
+                <a th:href="@{/portal/tickets/nuevo}" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-600 text-white font-medium shadow-md shadow-indigo-600/20">
+                    <i class="fa-solid fa-plus-circle text-lg"></i>
+                    <span>Nueva incidencia</span>
+                </a>
+            </nav>
+
+            <!-- Tarjeta Empresa -->
+            <div class="mt-8 p-3 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
+                <div class="flex items-center gap-2 text-[11px] font-bold tracking-wider text-indigo-400 uppercase">
+                    <i class="fa-solid fa-building text-xs"></i>
+                    <span>Tu Empresa</span>
+                </div>
+                <p class="text-xs font-bold text-white truncate" th:text="${empresaNombre}">Global Logistics del Perú S.A.</p>
+                <p class="text-[10px] text-slate-400">Portal de Atención</p>
+            </div>
         </div>
-      </aside>
 
-      <!-- CONTENIDO -->
-      <main class="portal-main">
-        <header class="portal-topbar">
-          <div class="portal-breadcrumb">
-            Inicio /
-            <strong>Nueva incidencia</strong>
-          </div>
+        <!-- Cierre de sesión y Perfil Inferior -->
+        <div class="space-y-2 border-t border-slate-800 pt-4">
+            <div class="flex items-center justify-between px-2 py-1">
+                <div class="flex items-center gap-2.5 overflow-hidden">
+                    <div class="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0"
+                         th:text="${usuarioIniciales}">MV</div>
+                    <div class="overflow-hidden">
+                        <p class="text-xs font-bold text-white truncate" th:text="${usuarioNombre}">Mariana Vargas</p>
+                        <p class="text-[10px] text-slate-400 truncate" th:text="${usuarioEmail}">m.vargas@globallogistics.pe</p>
+                    </div>
+                </div>
+                <form th:action="@{/portalusuario/logout}" method="post">
+                    <button type="submit" title="Cerrar Sesión" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition">
+                        <i class="fa-solid fa-arrow-right-from-bracket text-sm"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </aside>
 
-          <div class="portal-top-actions">
-            <div class="support-status">
-              <span class="support-status-icon">◉</span>
-              Soporte ServiClient Activo
+    <!-- ÁREA PRINCIPAL -->
+    <div class="flex-1 flex flex-col overflow-y-auto">
+
+        <!-- HEADER SUPERIOR -->
+        <header class="h-16 bg-white border-b border-slate-200 sticky top-0 z-30 px-8 flex items-center justify-between flex-shrink-0">
+            <!-- Breadcrumbs -->
+            <div class="flex items-center gap-2 text-sm text-slate-500">
+                <a th:href="@{/portal/mis-tickets}" class="hover:text-slate-800 transition">Inicio</a>
+                <span>/</span>
+                <span class="font-bold text-slate-900">Nueva incidencia</span>
             </div>
 
-            <button
-              class="portal-icon-button"
-              type="button"
-              title="Notificaciones"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
-                <path d="M10 21h4" />
-              </svg>
-            </button>
-
-            <div class="topbar-separator"></div>
-
-            <!-- INFORMACIÓN DINÁMICA DEL USUARIO EN TOPBAR -->
-            <div class="topbar-user">
-              <div class="topbar-avatar" th:text="${usuarioIniciales != null ? usuarioIniciales : 'U'}">LM</div>
-
-              <strong th:text="${usuarioNombre != null ? usuarioNombre : #authentication.name}">Laura Méndez</strong>
+            <div class="flex items-center gap-6">
+                <a th:href="@{/portal/mis-tickets}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-2 transition">
+                    <i class="fa-solid fa-arrow-left text-xs"></i>
+                    <span>Volver a Mis tickets</span>
+                </a>
+                <div class="flex items-center gap-3 pl-4 border-l border-slate-200">
+                    <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shadow-sm"
+                         th:text="${usuarioIniciales}">MV</div>
+                    <span class="text-sm font-semibold text-slate-800" th:text="${usuarioNombre}">Mariana Vargas</span>
+                </div>
             </div>
-          </div>
         </header>
 
-        <div class="portal-content">
-          <h1 class="portal-page-title">Reportar incidencia</h1>
+        <!-- FORMULARIO REPORTAR INCIDENCIA -->
+        <main class="p-8 max-w-4xl mx-auto w-full space-y-6">
 
-          <p class="portal-page-subtitle">
-            Describe el problema para que el equipo de soporte pueda ayudarte
-          </p>
+            <!-- Título y subtítulo -->
+            <div>
+                <h2 class="text-2xl font-bold text-slate-900">Reportar incidencia</h2>
+                <p class="text-sm text-slate-500 mt-1">Describe el problema para que el equipo de soporte pueda ayudarte.</p>
+            </div>
 
-          <div class="portal-card">
-            <form
-              th:action="@{/portal/tickets}"
-              th:object="${ticketForm}"
-              method="post"
-              enctype="multipart/form-data"
-            >
-              <!-- ASUNTO -->
-              <div class="portal-form-group">
-                <label class="portal-label">
-                  TÍTULO / ASUNTO
-                  <span class="required">*</span>
-                </label>
+            <!-- Tarjeta contenedor del formulario -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+                <form th:action="@{/portal/tickets}" th:object="${ticketForm}" method="post" enctype="multipart/form-data" class="space-y-6">
 
-                <input
-                  type="text"
-                  th:field="*{asunto}"
-                  class="portal-input"
-                  placeholder="Ej. Error al generar reportes consolidados"
-                  required
-                />
+                    <!-- Título / Asunto -->
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                            Título / Asunto <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" th:field="*{asunto}" required
+                               placeholder="Ej. Error al generar reportes consolidados"
+                               class="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition text-slate-800 placeholder-slate-400">
+                        <p class="text-xs text-slate-400">Un título claro y breve agiliza la asignación con el especialista adecuado.</p>
+                    </div>
 
-                <div class="portal-help">
-                  Un título claro y breve agiliza la asignación con el
-                  especialista adecuado.
-                </div>
+                    <!-- Fila: Categoría y Nivel de Urgencia -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Categoría -->
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                                Categoría <span class="text-rose-500">*</span>
+                            </label>
+                            <select th:field="*{categoria}" required
+                                    class="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition text-slate-700">
+                                <option value="">Selecciona una categoría</option>
+                                <option th:each="cat : ${categorias}" th:value="${cat}" th:text="${cat.etiqueta}"></option>
+                            </select>
+                        </div>
 
-                <span
-                  th:if="${#fields.hasErrors('asunto')}"
-                  th:errors="*{asunto}"
-                  class="portal-error"
-                >
-                </span>
-              </div>
+                        <!-- Nivel de Urgencia -->
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                                Nivel de Urgencia <span class="text-rose-500">*</span>
+                            </label>
+                            <select th:field="*{prioridad}" required
+                                    class="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition text-slate-700">
+                                <option th:each="prio : ${prioridades}" th:value="${prio}" th:text="${prio.etiqueta}" th:selected="${prio.name() == 'MEDIA'}"></option>
+                            </select>
+                        </div>
+                    </div>
 
-              <!-- CATEGORIA + PRIORIDAD -->
-              <div class="portal-form-row">
-                <div class="portal-form-group">
-                  <label class="portal-label">
-                    CATEGORÍA
-                    <span class="required">*</span>
-                  </label>
+                    <!-- Descripción Detallada -->
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                            Descripción Detallada <span class="text-rose-500">*</span>
+                        </label>
+                        <textarea th:field="*{descripcion}" rows="5" required
+                                  placeholder="Describe qué ocurrió, cuándo comenzó y cómo afecta tu trabajo..."
+                                  class="w-full p-4 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition text-slate-800 placeholder-slate-400"></textarea>
+                    </div>
 
-                  <select
-                    th:field="*{categoria}"
-                    class="portal-select"
-                    required
-                  >
-                    <option
-                      th:each="categoria : ${categorias}"
-                      th:value="${categoria}"
-                      th:text="${categoria.etiqueta}"
-                    ></option>
-                  </select>
-                </div>
+                    <!-- Zona Drag & Drop de Archivos Adjuntos -->
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                            Archivos Adjuntos
+                        </label>
+                        <div class="relative border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-2xl p-8 bg-indigo-50/20 text-center transition group cursor-pointer flex flex-col items-center justify-center">
+                            <input type="file" name="archivos" id="inputArchivos" multiple class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                            <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-lg mb-3 group-hover:scale-105 transition">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+                            <p class="text-sm font-bold text-slate-800" id="textoSubida">Arrastra archivos aquí o haz clic para seleccionar</p>
+                            <p class="text-xs text-slate-400 mt-1">Formatos permitidos: PNG, JPG, PDF, TXT (Máx. 10MB por archivo)</p>
+                            <div id="listaArchivos" class="mt-3 flex flex-wrap gap-2 justify-center"></div>
+                        </div>
+                    </div>
 
-                <div class="portal-form-group">
-                  <label class="portal-label">
-                    NIVEL DE URGENCIA
-                    <span class="required">*</span>
-                  </label>
+                    <!-- Botones de Acción con Indigo -->
+                    <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                        <a th:href="@{/portal/mis-tickets}" class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold text-xs transition">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-600/20 transition">
+                            <i class="fa-solid fa-paper-plane text-xs"></i>
+                            <span>Enviar incidencia</span>
+                        </button>
+                    </div>
 
-                  <select
-                    th:field="*{prioridad}"
-                    class="portal-select"
-                    required
-                  >
-                    <option
-                      th:each="prioridad : ${prioridades}"
-                      th:value="${prioridad}"
-                      th:text="${prioridad.etiqueta}"
-                    ></option>
-                  </select>
-                </div>
-              </div>
+                </form>
+            </div>
 
-              <!-- DESCRIPCION -->
-              <div class="portal-form-group">
-                <label class="portal-label">
-                  DESCRIPCIÓN DETALLADA
-                  <span class="required">*</span>
-                </label>
-
-                <textarea
-                  th:field="*{descripcion}"
-                  class="portal-textarea"
-                  placeholder="Describe qué ocurrió, cuándo comenzó y cómo afecta tu trabajo..."
-                  required
-                >
-                </textarea>
-
-                <span
-                  th:if="${#fields.hasErrors('descripcion')}"
-                  th:errors="*{descripcion}"
-                  class="portal-error"
-                >
-                </span>
-              </div>
-
-              <!-- ADJUNTOS -->
-              <div class="portal-form-group">
-                <label class="portal-label"> ARCHIVOS ADJUNTOS </label>
-
-                <label class="upload-box">
-                  <input
-                    id="archivos"
-                    type="file"
-                    name="archivos"
-                    multiple
-                    accept=".png,.jpg,.jpeg,.pdf,.txt"
-                    style="display: none"
-                  />
-
-                  <div class="upload-icon">☁</div>
-
-                  <div class="upload-title">
-                    Arrastra archivos aquí o haz clic para seleccionar
-                  </div>
-
-                  <div class="upload-help">
-                    Formatos permitidos: PNG, JPG, PDF, TXT (Máx. 10MB por
-                    archivo)
-                  </div>
-                </label>
-
-                <div id="selectedFiles" class="selected-files"></div>
-              </div>
-
-              <!-- BOTONES -->
-              <div class="portal-actions">
-                <a
-                  th:href="@{/portal/tickets}"
-                  class="portal-btn portal-btn-secondary"
-                  style="text-decoration: none"
-                >
-                  Cancelar
-                </a>
-
-                <button type="submit" class="portal-btn portal-btn-primary">
-                  ➤ Enviar incidencia
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </main>
+        </main>
     </div>
 
-    
-
     <script>
-      const inputArchivos = document.getElementById("archivos");
-      const contenedor = document.getElementById("selectedFiles");
+        const input = document.getElementById('inputArchivos');
+        const lista = document.getElementById('listaArchivos');
+        const texto = document.getElementById('textoSubida');
 
-      inputArchivos.addEventListener("change", function () {
-        contenedor.innerHTML = "";
-
-        Array.from(this.files).forEach((file) => {
-          const fila = document.createElement("div");
-          fila.className = "file-row";
-
-          const sizeKb = Math.round(file.size / 1024);
-
-          fila.innerHTML = `
-                <div>
-                    <strong>${file.name}</strong>
-                    <div class="file-size">${sizeKb} KB · Listo para enviar</div>
-                </div>
-
-                <span>✓</span>
-            `;
-
-          contenedor.appendChild(fila);
+        input.addEventListener('change', () => {
+            lista.innerHTML = '';
+            if (input.files.length > 0) {
+                texto.innerText = `${input.files.length} archivo(s) seleccionado(s)`;
+                Array.from(input.files).forEach(file => {
+                    const badge = document.createElement('span');
+                    badge.className = 'px-2.5 py-1 rounded-lg bg-white border border-indigo-200 text-indigo-700 text-[11px] font-semibold flex items-center gap-1.5 shadow-sm';
+                    badge.innerHTML = `<i class="fa-regular fa-file"></i> ${file.name}`;
+                    lista.appendChild(badge);
+                });
+            } else {
+                texto.innerText = 'Arrastra archivos aquí o haz clic para seleccionar';
+            }
         });
-      });
     </script>
-  </body>
+</body>
 </html>

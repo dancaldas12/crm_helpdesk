@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesa de Ayuda - ServiClient</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .badge-priority-critical { background-color: #fef2f2; color: #dc2626; border: 1px solid #fee2e2; }
+        .badge-priority-high { background-color: #fff1f2; color: #e11d48; border: 1px solid #ffe4e6; }
+        .badge-priority-medium { background-color: #fffbeb; color: #d97706; border: 1px solid #fef3c7; }
+        .badge-priority-low { background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+        
+        .badge-status-open { background-color: #eff6ff; color: #2563eb; }
+        .badge-status-in-progress { background-color: #f5f3ff; color: #7c3aed; }
+        .badge-status-pending { background-color: #fff7ed; color: #ea580c; }
+        .badge-status-resolved { background-color: #ecfdf5; color: #059669; }
+        .badge-status-closed { background-color: #f3f4f6; color: #4b5563; }
+    </style>
+</head>
+<body class="bg-slate-50 flex h-screen font-sans antialiased text-slate-800">
+
+    <!-- Barra lateral (Sidebar) -->
+    <aside class="w-64 bg-[#0f172a] text-slate-300 flex flex-col justify-between p-4 flex-shrink-0">
+        <div>
+            <!-- Logo ServiClient -->
+            <div class="flex items-center gap-3 px-2 py-4 mb-6 border-b border-slate-800">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-xl">
+                    <i class="fa-solid fa-tv"></i>
+                </div>
+                <div>
+                    <h1 class="text-white font-bold text-lg leading-tight">ServiClient</h1>
+                    <span class="text-xs text-slate-400" th:text="${empresaNombre}">Portal Cliente</span>
+                </div>
+            </div>
+
+            <!-- Navegación -->
+            <nav class="space-y-1">
+                <a th:href="@{/portal/mistickets}" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-600 text-white font-medium shadow-md shadow-indigo-600/20">
+                    <i class="fa-solid fa-ticket text-lg"></i>
+                    <span>Mis Tickets</span>
+                </a>
+                <a th:href="@{/portal/tickets/nuevo}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <i class="fa-solid fa-plus-circle text-lg"></i>
+                    <span>Nueva Incidencia</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Cierre de sesión -->
+        <form th:action="@{/portalusuario/logout}" method="post">
+            <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-rose-400 hover:bg-slate-800/50 rounded-xl transition">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                <span>Cerrar Sesión</span>
+            </button>
+        </form>
+    </aside>
+
+    <!-- Contenedor de contenido -->
+    <main class="flex-1 flex flex-col overflow-y-auto">
+        <!-- Header superior -->
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8">
+            <div class="flex items-center gap-2 text-sm text-slate-500">
+                <span>Inicio</span>
+                <span>&rsaquo;</span>
+                <span class="text-slate-800 font-medium">Mesa de Ayuda</span>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <button class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-regular fa-bell text-lg"></i>
+                </button>
+                <div class="flex items-center gap-3 pl-4 border-l border-slate-200">
+                    <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm"
+                         th:text="${usuarioIniciales}">CL</div>
+                    <span class="text-sm font-semibold text-slate-700" th:text="${usuarioNombre}">Contacto</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="p-8 max-w-7xl mx-auto w-full space-y-6">
+            
+            <!-- Encabezado y botón Nuevo Ticket -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">Mesa de Ayuda</h2>
+                    <p class="text-sm text-slate-500 mt-1">Gestiona y realiza seguimiento a las solicitudes de soporte de tu empresa.</p>
+                </div>
+                <a th:href="@{/portal/tickets/nuevo}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-md shadow-indigo-600/20 transition">
+                    <i class="fa-solid fa-plus text-sm"></i>
+                    <span>Nuevo ticket</span>
+                </a>
+            </div>
+
+            <!-- 5 KPIs Superiores -->
+            <div class="grid grid-cols-5 gap-4">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-slate-500 text-xs font-semibold tracking-wider uppercase">
+                        <span>Tickets Abiertos</span>
+                        <i class="fa-regular fa-folder"></i>
+                    </div>
+                    <div class="text-3xl font-extrabold text-slate-900 mt-4" th:text="${kpiAbiertos}">0</div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-slate-500 text-xs font-semibold tracking-wider uppercase">
+                        <span>En Proceso</span>
+                        <i class="fa-solid fa-arrows-rotate text-indigo-500"></i>
+                    </div>
+                    <div class="text-3xl font-extrabold text-slate-900 mt-4" th:text="${kpiEnProceso}">0</div>
+                </div>
+
+                <!-- Recuadro Críticos -->
+                <div class="bg-white p-5 rounded-2xl border-2 border-rose-200 shadow-sm flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-rose-600 text-xs font-semibold tracking-wider uppercase">
+                        <span>Críticos</span>
+                        <i class="fa-solid fa-triangle-exclamation text-rose-500"></i>
+                    </div>
+                    <div class="text-3xl font-extrabold text-rose-600 mt-4" th:text="${kpiCriticos}">0</div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-slate-500 text-xs font-semibold tracking-wider uppercase">
+                        <span>Pendientes</span>
+                        <i class="fa-regular fa-clock text-slate-400"></i>
+                    </div>
+                    <div class="text-3xl font-extrabold text-slate-900 mt-4" th:text="${kpiPendientes}">0</div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-rose-500 text-xs font-semibold tracking-wider uppercase">
+                        <span>Fuera de SLA</span>
+                        <i class="fa-solid fa-ban text-rose-500"></i>
+                    </div>
+                    <div class="text-3xl font-extrabold text-rose-600 mt-4" th:text="${kpiFueraDeSla}">0</div>
+                </div>
+            </div>
+
+            <!-- Filtros de búsqueda -->
+            <form th:action="@{/portal/mistickets}" method="get" class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+                <div class="flex-1 relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-3 text-slate-400 text-sm"></i>
+                    <input type="text" name="busqueda" th:value="${busqueda}" placeholder="Buscar tickets, código, asunto..." 
+                           class="w-full pl-10 pr-4 py-1.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <select name="estado" class="text-sm px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 focus:outline-none focus:border-indigo-500">
+                    <option value="">Todos los estados</option>
+                    <option th:each="est : ${estados}" th:value="${est}" th:text="${est.etiqueta}" th:selected="${est == estadoSeleccionado}"></option>
+                </select>
+
+                <select name="prioridad" class="text-sm px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 focus:outline-none focus:border-indigo-500">
+                    <option value="">Todas las prioridades</option>
+                    <option th:each="prio : ${prioridades}" th:value="${prio}" th:text="${prio.etiqueta}" th:selected="${prio == prioridadSeleccionada}"></option>
+                </select>
+
+                <button type="submit" class="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl transition">
+                    Filtrar
+                </button>
+            </form>
+
+            <!-- Tabla de datos -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-200 bg-slate-50/60 text-slate-400 font-semibold text-xs uppercase tracking-wider">
+                            <th class="py-4 px-6">ID</th>
+                            <th class="py-4 px-6">Asunto</th>
+                            <th class="py-4 px-6">Agente</th>
+                            <th class="py-4 px-6">Categoría</th>
+                            <th class="py-4 px-6">Prioridad</th>
+                            <th class="py-4 px-6">Estado</th>
+                            <th class="py-4 px-6 text-right">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr th:if="${#lists.isEmpty(tickets)}">
+                            <td colspan="7" class="py-10 text-center text-slate-400">
+                                <i class="fa-regular fa-folder-open text-3xl mb-2 block"></i>
+                                No se encontraron tickets registrados.
+                            </td>
+                        </tr>
+                        <tr th:each="t : ${tickets}" class="hover:bg-slate-50/80 transition">
+                            <td class="py-4 px-6 font-bold text-slate-800" th:text="${t.numeroTicket}">TK-8634</td>
+                            <td class="py-4 px-6 font-semibold text-slate-800">
+                                <a th:href="@{'/portal/tickets/' + ${t.id}}" class="hover:text-indigo-600 hover:underline" th:text="${t.asunto}">
+                                    error página
+                                </a>
+                            </td>
+                            <td class="py-4 px-6 text-slate-500" th:text="${t.agente != null ? t.agente.nombreCompleto : 'Sin asignar'}">Sin asignar</td>
+                            <td class="py-4 px-6 text-slate-500" th:text="${t.categoriaEntity != null ? t.categoriaEntity.nombre : 'Soporte Técnico'}">Soporte Técnico</td>
+                            <td class="py-4 px-6">
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold"
+                                      th:classappend="${t.prioridad != null ? t.prioridad.cssClass : 'badge-priority-medium'}"
+                                      th:text="${t.prioridad != null ? t.prioridad.etiqueta : 'Media'}">Media</span>
+                            </td>
+                            <td class="py-4 px-6">
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold"
+                                      th:classappend="${t.estado != null ? t.estado.cssClass : 'badge-status-open'}"
+                                      th:text="${t.estado != null ? t.estado.etiqueta : 'Abierto'}">Abierto</span>
+                            </td>
+                            <td class="py-4 px-6 text-right">
+    <a th:href="@{'/portal/tickets/' + ${t.id}}" 
+       class="text-indigo-600 hover:text-indigo-800 font-semibold text-xs transition">
+        Ver Detalle &rarr;
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+
+</body>
+</html>

@@ -142,7 +142,7 @@ public class SecurityConfig {
 
                             String destino = debeCambiar
                                     ? "/portalusuario/login"
-                                    : "/portal/tickets/nuevo";
+                                    : "/portal/mis-tickets";
 
                             response.sendRedirect(request.getContextPath() + destino);
                         })
