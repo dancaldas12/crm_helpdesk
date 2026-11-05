@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
 @Controller
-@RequestMapping("/portal/mis-tickets") 
+@RequestMapping("/portal/mis-tickets")
 @RequiredArgsConstructor
 @Tag(name = "Portal Cliente - Mis Tickets", description = "Listado y seguimiento de tickets del cliente")
 public class MisTicketsController {
@@ -103,6 +103,7 @@ public class MisTicketsController {
 
         model.addAttribute("usuarioNombre", StringUtils.defaultIfBlank(nombreCompleto, cuenta.getEmail()));
         model.addAttribute("usuarioIniciales", StringUtils.defaultIfBlank(iniciales, "U"));
+        model.addAttribute("usuarioEmail", cuenta.getEmail());
         model.addAttribute("empresaNombre", StringUtils.defaultIfBlank(contacto.getCliente().getRazonSocial(), "Mi Empresa"));
     }
 }

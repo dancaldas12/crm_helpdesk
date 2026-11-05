@@ -46,8 +46,8 @@
                     <i class="fa-solid fa-building text-xs"></i>
                     <span>Tu Empresa</span>
                 </div>
-                <p class="text-xs font-bold text-white truncate" th:text="${empresaNombre}">Global Logistics del Perú S.A.</p>
-                <p class="text-[10px] text-slate-400">Portal de Atención</p>
+                <p class="text-xs font-bold text-white truncate" th:text="${empresaNombre}">NovaTech Industries</p>
+                <p class="text-[10px] text-slate-400">Plan SaaS Enterprise</p>
             </div>
         </div>
 
@@ -69,10 +69,11 @@
 
                 <!-- Opciones -->
                 <nav class="space-y-1">
-                    <a th:href="@{/portal/mi-cuenta}" class="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition">
+                    <!-- Botón para abrir modal Mi Cuenta -->
+                    <button type="button" id="openMiCuentaModalBtn" class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition text-left">
                         <i class="fa-regular fa-user text-slate-400 w-4 text-center"></i>
                         <span>Mi cuenta</span>
-                    </a>
+                    </button>
 
                     <!-- Disparador de Modal Flotante de Contraseña -->
                     <button type="button" id="openPasswordModalBtn" class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition text-left">
@@ -261,7 +262,105 @@
         </div>
     </div>
 
+    <!-- ========================================================================= -->
+    <!-- MODAL FLOTANTE: MI CUENTA -->
+    <!-- ========================================================================= -->
+    <div id="miCuentaModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full p-6 sm:p-7 relative animate-in fade-in zoom-in duration-150">
+            
+            <!-- Header con icono y boton X -->
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-purple-50 text-indigo-600 flex items-center justify-center text-sm shadow-sm">
+                        <i class="fa-regular fa-user"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-900">Mi cuenta</h3>
+                </div>
+                <button type="button" id="closeMiCuentaModalBtn" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Tarjeta Perfil Superior -->
+            <div class="mt-5 p-4 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center gap-3.5">
+                <div class="w-12 h-12 rounded-full bg-indigo-600 text-white font-bold text-sm flex items-center justify-center flex-shrink-0 shadow-sm"
+                     th:text="${usuarioIniciales}">LM</div>
+                <div class="overflow-hidden space-y-0.5">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-bold text-slate-900 truncate" th:text="${usuarioNombre}">Laura Méndez</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-indigo-600 border border-indigo-100">Cliente</span>
+                    </div>
+                    <p class="text-xs text-slate-500 truncate" th:text="${usuarioEmail}">laura@novatech.com</p>
+                    <p class="text-[11px] text-slate-400 flex items-center gap-1.5 pt-0.5">
+                        <i class="fa-solid fa-building text-[10px]"></i>
+                        <span th:text="${empresaNombre}">NovaTech Industries</span>
+                        <span>•</span>
+                        <span>Plan Enterprise</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Formulario / Datos del Perfil -->
+            <div class="mt-5 space-y-4 text-xs">
+                <!-- Nombre Completo -->
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Nombre Completo</label>
+                    <input type="text" readonly th:value="${usuarioNombre}" 
+                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-none">
+                </div>
+
+                <!-- Correo Electrónico -->
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Correo Electrónico</label>
+                    <input type="text" readonly th:value="${usuarioEmail}" 
+                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-none">
+                </div>
+
+                <!-- Fila Empresa y Usuario/ID -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Empresa</label>
+                            <span class="text-[10px] text-slate-400 flex items-center gap-1">
+                                <i class="fa-solid fa-lock text-[9px]"></i> Solo lectura
+                            </span>
+                        </div>
+                        <input type="text" readonly th:value="${empresaNombre}" 
+                               class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-medium truncate focus:outline-none">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Usuario / ID</label>
+                            <span class="text-[10px] text-slate-400 flex items-center gap-1">
+                                <i class="fa-solid fa-lock text-[9px]"></i> Solo lectura
+                            </span>
+                        </div>
+                        <input type="text" readonly th:value="${#strings.contains(usuarioEmail, '@') ? #strings.substringBefore(usuarioEmail, '@') : usuarioEmail}" 
+                               class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-medium truncate focus:outline-none uppercase">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones de Acción Inferiores -->
+            <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                <button type="button" id="switchToPasswordModalBtn" 
+                        class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition">
+                    <i class="fa-solid fa-rotate text-xs text-slate-400"></i>
+                    <span>Cambiar contraseña</span>
+                </button>
+                <button type="button" id="closeMiCuentaFooterBtn" 
+                        class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-600/20 transition">
+                    Cerrar
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
     <!-- MODAL FLOTANTE: CAMBIAR CONTRASEÑA -->
+    <!-- ========================================================================= -->
     <div id="passwordModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full p-6 sm:p-8 relative">
             
@@ -345,14 +444,26 @@
             });
         }
 
-        // 2. Control de Dropdown de Usuario y Modal de Contraseña
+        // 2. Control de Dropdown de Usuario y Modales
         const userBtn = document.getElementById('userDropdownBtn');
         const userDropdown = document.getElementById('userDropdown');
+
+        // Modales
+        const miCuentaModal = document.getElementById('miCuentaModal');
         const passModal = document.getElementById('passwordModal');
+
+        // Botones Mi Cuenta
+        const openMiCuentaBtn = document.getElementById('openMiCuentaModalBtn');
+        const closeMiCuentaBtn = document.getElementById('closeMiCuentaModalBtn');
+        const closeMiCuentaFooterBtn = document.getElementById('closeMiCuentaFooterBtn');
+        const switchToPassBtn = document.getElementById('switchToPasswordModalBtn');
+
+        // Botones Password
         const openPassBtn = document.getElementById('openPasswordModalBtn');
         const closePassBtn = document.getElementById('closePasswordModalBtn');
         const cancelPassBtn = document.getElementById('cancelPasswordModalBtn');
 
+        // Toggle del menú del usuario
         if (userBtn && userDropdown) {
             userBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -365,28 +476,52 @@
             });
         }
 
-        function abrirModal() {
-            if (passModal) passModal.classList.remove('hidden');
+        // Control de Apertura / Cierre
+        function abrirMiCuenta() {
+            if (miCuentaModal) miCuentaModal.classList.remove('hidden');
             if (userDropdown) userDropdown.classList.add('hidden');
         }
 
-        function cerrarModal() {
+        function cerrarMiCuenta() {
+            if (miCuentaModal) miCuentaModal.classList.add('hidden');
+        }
+
+        function abrirPassword() {
+            if (passModal) passModal.classList.remove('hidden');
+            if (userDropdown) userDropdown.classList.add('hidden');
+            if (miCuentaModal) miCuentaModal.classList.add('hidden');
+        }
+
+        function cerrarPassword() {
             if (passModal) passModal.classList.add('hidden');
         }
 
-        if (openPassBtn) openPassBtn.addEventListener('click', abrirModal);
-        if (closePassBtn) closePassBtn.addEventListener('click', cerrarModal);
-        if (cancelPassBtn) cancelPassBtn.addEventListener('click', cerrarModal);
+        // Eventos Mi Cuenta
+        if (openMiCuentaBtn) openMiCuentaBtn.addEventListener('click', abrirMiCuenta);
+        if (closeMiCuentaBtn) closeMiCuentaBtn.addEventListener('click', cerrarMiCuenta);
+        if (closeMiCuentaFooterBtn) closeMiCuentaFooterBtn.addEventListener('click', cerrarMiCuenta);
+        if (switchToPassBtn) switchToPassBtn.addEventListener('click', abrirPassword);
 
+        // Eventos Password
+        if (openPassBtn) openPassBtn.addEventListener('click', abrirPassword);
+        if (closePassBtn) closePassBtn.addEventListener('click', cerrarPassword);
+        if (cancelPassBtn) cancelPassBtn.addEventListener('click', cerrarPassword);
+
+        // Cerrar al hacer clic en el backdrop
+        if (miCuentaModal) {
+            miCuentaModal.addEventListener('click', (e) => {
+                if (e.target === miCuentaModal) cerrarMiCuenta();
+            });
+        }
         if (passModal) {
             passModal.addEventListener('click', (e) => {
-                if (e.target === passModal) cerrarModal();
+                if (e.target === passModal) cerrarPassword();
             });
         }
 
         // Reabrir automáticamente si viene un mensaje de error o éxito
         /*[# th:if="${abrirModalPassword}"]*/
-        abrirModal();
+        abrirPassword();
         /*[/]*/
     </script>
 </body>
