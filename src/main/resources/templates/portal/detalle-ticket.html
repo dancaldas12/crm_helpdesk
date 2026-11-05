@@ -13,7 +13,7 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
 </head>
-<body class="bg-slate-50 flex h-screen font-sans antialiased text-slate-800 overflow-hidden">
+<body class="bg-slate-50 flex h-screen font-sans antialiased text-slate-800 overflow-hidden relative">
 
     <!-- COLUMNA IZQUIERDA: SIDEBAR OSCURA -->
     <aside class="w-64 bg-[#0f172a] text-slate-300 flex flex-col justify-between p-4 flex-shrink-0">
@@ -33,11 +33,11 @@
             <nav class="space-y-1">
                 <a th:href="@{/portal/mis-tickets}" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-600 text-white font-medium shadow-md shadow-indigo-600/20">
                     <i class="fa-solid fa-ticket text-lg"></i>
-                    <span>Mis Tickets</span>
+                    <span>Mis tickets</span>
                 </a>
                 <a th:href="@{/portal/tickets/nuevo}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
                     <i class="fa-solid fa-plus-circle text-lg"></i>
-                    <span>Nueva Incidencia</span>
+                    <span>Nueva incidencia</span>
                 </a>
             </nav>
 
@@ -47,27 +47,59 @@
                     <i class="fa-solid fa-building text-xs"></i>
                     <span>Tu Empresa</span>
                 </div>
-                <p class="text-xs font-bold text-white truncate" th:text="${empresaNombre}">Global Logistics del Perú S.A.</p>
-                <p class="text-[10px] text-slate-400">Portal de Atención</p>
+                <p class="text-xs font-bold text-white truncate" th:text="${empresaNombre}">NovaTech Industries</p>
+                <p class="text-[10px] text-slate-400">Plan SaaS Enterprise</p>
             </div>
         </div>
 
-        <!-- Cierre de sesión y Perfil Inferior -->
-        <div class="space-y-2 border-t border-slate-800 pt-4">
-            <div class="flex items-center justify-between px-2 py-1">
-                <div class="flex items-center gap-2.5 overflow-hidden">
-                    <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center flex-shrink-0"
-                         th:text="${usuarioIniciales}">MV</div>
+        <!-- Perfil Inferior con Dropdown Flotante hacia arriba -->
+        <div class="relative pt-4 border-t border-slate-800">
+
+            <!-- Menú Desplegable Popup -->
+            <div id="userDropdown" class="hidden absolute bottom-full left-0 right-0 mb-3 bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 z-40 text-slate-800">
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-100 mb-2">
+                    <div class="w-10 h-10 rounded-full bg-purple-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-sm"
+                         th:text="${usuarioIniciales}">LM</div>
                     <div class="overflow-hidden">
-                        <p class="text-xs font-bold text-white truncate" th:text="${usuarioNombre}">Mariana Vargas</p>
+                        <p class="text-xs font-bold text-slate-900 truncate" th:text="${usuarioNombre}">Laura Méndez</p>
+                        <p class="text-[11px] text-slate-400 truncate" th:text="${empresaNombre}">NovaTech Industries</p>
                     </div>
                 </div>
-                <form th:action="@{/portalusuario/logout}" method="post">
-                    <button type="submit" title="Cerrar Sesión" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition">
-                        <i class="fa-solid fa-arrow-right-from-bracket text-sm"></i>
+
+                <nav class="space-y-1">
+                    <a th:href="@{/portal/mi-cuenta}" class="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition">
+                        <i class="fa-regular fa-user text-slate-400 w-4 text-center"></i>
+                        <span>Mi cuenta</span>
+                    </a>
+
+                    <button type="button" id="openPasswordModalBtn" class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition text-left">
+                        <i class="fa-solid fa-lock text-slate-400 w-4 text-center"></i>
+                        <span>Cambiar contraseña</span>
                     </button>
-                </form>
+
+                    <form th:action="@{/portalusuario/logout}" method="post" class="pt-1 border-t border-slate-100 mt-1">
+                        <button type="submit" class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold text-rose-500 hover:bg-rose-50 transition text-left">
+                            <i class="fa-solid fa-arrow-right-from-bracket text-rose-500 w-4 text-center"></i>
+                            <span>Cerrar sesión</span>
+                        </button>
+                    </form>
+                </nav>
             </div>
+
+            <!-- Botón del Perfil Inferior -->
+            <button id="userDropdownBtn" type="button" class="w-full flex items-center justify-between p-2.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 transition text-left group">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <div class="w-9 h-9 rounded-full bg-purple-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-sm"
+                         th:text="${usuarioIniciales}">LM</div>
+                    <div class="overflow-hidden">
+                        <p class="text-xs font-bold text-white truncate" th:text="${usuarioNombre}">Laura Méndez</p>
+                        <p class="text-[11px] text-slate-400 truncate" th:text="${usuarioEmail}">laura@novatech.com</p>
+                    </div>
+                </div>
+                <div class="text-slate-400 group-hover:text-slate-200 transition pr-1">
+                    <i class="fa-solid fa-chevron-up text-xs"></i>
+                </div>
+            </button>
         </div>
     </aside>
 
@@ -230,7 +262,7 @@
 
                             <!-- Evento de cambio de estado -->
                             <div class="flex justify-center my-4">
-                                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs text-slate-600 font-medium">
+                                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs text-slate-600 font-medium">
                                     <i class="fa-solid fa-arrows-left-right text-slate-400"></i>
                                     <span th:text="${(ticket.agente != null ? ticket.agente.nombreCompleto : 'Ana Silva') + ' cambió el estado a: '}">Ana Silva cambió el estado a:</span>
                                     <span class="font-bold text-slate-800" th:text="${ticket.estado != null ? ticket.estado.etiqueta : 'Resuelto'}">Resuelto</span>
@@ -402,5 +434,106 @@
         </main>
     </div>
 
+    <!-- MODAL FLOTANTE: CAMBIAR CONTRASEÑA -->
+    <div id="passwordModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full p-6 sm:p-8 relative">
+            
+            <button type="button" id="closePasswordModalBtn" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+
+            <div class="flex items-center gap-3.5 mb-5">
+                <div class="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg flex-shrink-0">
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-slate-900">Cambiar Contraseña</h3>
+                    <p class="text-xs text-slate-500">Actualiza tus credenciales de acceso al portal.</p>
+                </div>
+            </div>
+
+            <!-- Alertas Flash -->
+            <div th:if="${modalPasswordError}" class="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+                <i class="fa-solid fa-circle-exclamation text-rose-500"></i>
+                <span th:text="${modalPasswordError}"></span>
+            </div>
+            <div th:if="${modalPasswordExito}" class="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold flex items-center gap-2">
+                <i class="fa-solid fa-circle-check text-emerald-500"></i>
+                <span th:text="${modalPasswordExito}"></span>
+            </div>
+
+            <form th:action="@{/portal/cambiar-password-modal}" method="post" class="space-y-4">
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">Contraseña Actual</label>
+                    <input type="password" name="passwordActual" required class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">Nueva Contraseña</label>
+                    <input type="password" name="nuevaPassword" minlength="8" required class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition">
+                    <p class="text-[10px] text-slate-400 mt-1">Mínimo 8 caracteres.</p>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">Confirmar Nueva Contraseña</label>
+                    <input type="password" name="confirmarPassword" minlength="8" required class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition">
+                </div>
+
+                <div class="pt-3 flex justify-end gap-2.5">
+                    <button type="button" id="cancelPasswordModalBtn" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold text-xs transition">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-600/20 transition">
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script th:inline="javascript">
+        const userBtn = document.getElementById('userDropdownBtn');
+        const userDropdown = document.getElementById('userDropdown');
+        const passModal = document.getElementById('passwordModal');
+        const openPassBtn = document.getElementById('openPasswordModalBtn');
+        const closePassBtn = document.getElementById('closePasswordModalBtn');
+        const cancelPassBtn = document.getElementById('cancelPasswordModalBtn');
+
+        if (userBtn && userDropdown) {
+            userBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.classList.toggle('hidden');
+            });
+            document.addEventListener('click', (e) => {
+                if (!userDropdown.contains(e.target) && !userBtn.contains(e.target)) {
+                    userDropdown.classList.add('hidden');
+                }
+            });
+        }
+
+        function abrirModal() {
+            if (passModal) passModal.classList.remove('hidden');
+            if (userDropdown) userDropdown.classList.add('hidden');
+        }
+
+        function cerrarModal() {
+            if (passModal) passModal.classList.add('hidden');
+        }
+
+        if (openPassBtn) openPassBtn.addEventListener('click', abrirModal);
+        if (closePassBtn) closePassBtn.addEventListener('click', cerrarModal);
+        if (cancelPassBtn) cancelPassBtn.addEventListener('click', cerrarModal);
+
+        if (passModal) {
+            passModal.addEventListener('click', (e) => {
+                if (e.target === passModal) cerrarModal();
+            });
+        }
+
+        /*[# th:if="${abrirModalPassword}"]*/
+        abrirModal();
+        /*[/]*/
+    </script>
 </body>
 </html>
