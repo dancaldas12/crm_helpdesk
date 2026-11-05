@@ -1,6 +1,8 @@
 package com.serviclient.crm.service;
 
+import com.serviclient.crm.dto.PortalTicketDto;
 import com.serviclient.crm.dto.TicketDto;
+import com.serviclient.crm.entity.CuentaPortal;
 import com.serviclient.crm.entity.Ticket;
 import com.serviclient.crm.entity.TicketMensaje;
 import com.serviclient.crm.entity.Usuario;
@@ -140,4 +142,6 @@ public interface ITicketService {
      * @throws org.springframework.web.server.ResponseStatusException si el ticket no existe
      */
     void cerrarTicket(Long ticketId, Boolean enviarCsat, String comentarioCierre, Usuario autor);
+
+    Ticket crearTicketDesdePortal(PortalTicketDto dto, CuentaPortal cuenta);
 }

@@ -32,6 +32,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import com.serviclient.crm.dto.PortalTicketDto;
+import com.serviclient.crm.entity.CuentaPortal;
+import com.serviclient.crm.entity.Ticket;
 
 /**
  * Servicio de lógica de negocio para la Mesa de Ayuda (Helpdesk).
@@ -460,4 +463,89 @@ public class TicketService implements ITicketService {
 
         healthScoreService.recalcularYActualizarHealthScore(ticket.getCliente());
     }
+
+@Override
+    @Transactional
+    public Ticket crearTicketDesdePortal(PortalTicketDto dto, CuentaPortal cuenta) {
+        if (cuenta.getContacto() == null || cuenta.getContacto().getCliente() == null) {
+            throw new IllegalArgumentException("La cuenta del portal no tiene un contacto o cliente asociado.");
+        }
+
+        Contacto contacto = cuenta.getContacto();
+        Cliente cliente = contacto.getCliente();
+        Empresa empresa = cliente.getEmpresa();
+        Long empresaId = empresa.getId();
+
+        // Generar número de ticket alfanumérico TK-xxxx
+        String numeroTicket = "TK-" + (4000 + new Random().nextInt(5000));
+
+        // Obtener o crear Categoría en BD
+        String catNombre = dto.getCategoria() != null ? dto.getCategoria().getEtiqueta() : "Soporte Técnico";
+        CategoriaTicketEntity categoriaEntity = categoriaTicketRepository
+                .findByEmpresaIdAndNombre(empresaId, catNombre)
+                .orElseGet(() -> categoriaTicketRepository.save(
+                        CategoriaTicketEntity.builder()
+                                .empresa(empresa)
+                                .nombre(catNombre)
+                                .descripcion("Categoría " + catNombre)
+                                .estado("ACTIVO")
+                                .build()));
+
+        LocalDateTime ahora = LocalDateTime.now();
+        PrioridadTicket prioridad = dto.getPrioridad() != null ? dto.getPrioridad() : PrioridadTicket.MEDIA;
+
+        // Calcular SLA según configuración de la empresa
+        int minutosResp = 120;
+        int minutosResol = 1440;
+        var slaConfig = configuracionSlaRepository.findByEmpresaIdAndPrioridad(empresaId, prioridad);
+        if (slaConfig.isPresent()) {
+            minutosResp = slaConfig.get().getTiempoRespuestaMinutos();
+            minutosResol = slaConfig.get().getTiempoResolucionMinutos();
+        }
+
+        // Construir la entidad Ticket
+        Ticket ticket = Ticket.builder()
+                .numeroTicket(numeroTicket)
+                .empresa(empresa)
+                .cliente(cliente)
+                .contacto(contacto)
+                .categoriaEntity(categoriaEntity)
+                .agente(null)
+                .asunto(dto.getAsunto())
+                .descripcion(dto.getDescripcion())
+                .prioridad(prioridad)
+                .estado(EstadoTicket.ABIERTO)
+                .createdAt(ahora)
+                .slaRespuestaLimite(ahora.plusMinutes(minutosResp))
+                .slaResolucionLimite(ahora.plusMinutes(minutosResol))
+                .build();
+
+        Ticket guardado = ticketRepository.save(ticket);
+
+        // Mensaje inicial del cliente
+        TicketMensaje mensajeInicial = TicketMensaje.builder()
+                .ticket(guardado)
+                .usuario(null)
+                .contacto(contacto)
+                .tipo(TipoMensajeTicket.CLIENTE)
+                .esInterno(false)
+                .mensaje(dto.getDescripcion())
+                .createdAt(ahora)
+                .build();
+        ticketMensajeRepository.save(mensajeInicial);
+
+        // Historial
+        TicketHistorial hist = TicketHistorial.builder()
+                .ticket(guardado)
+                .usuario(null)
+                .tipoEvento("CREACION")
+                .descripcion("Ticket creado desde el Portal por: " + contacto.getNombreCompleto())
+                .createdAt(ahora)
+                .build();
+        ticketHistorialRepository.save(hist);
+
+        healthScoreService.recalcularYActualizarHealthScore(cliente);
+        return guardado;
+    }
+
 }
