@@ -45,17 +45,17 @@ public class ClienteUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("Cliente no encontrado con email: " + username));
 
         // Diagnóstico en consola:
-        String hashBD = cuenta.getPasswordHash();
-        boolean coincide = passwordEncoder.matches("admin123", hashBD);
-        String nuevoHashGenerado = passwordEncoder.encode("admin123");
+        //String hashBD = cuenta.getPasswordHash();
+        //boolean coincide = passwordEncoder.matches("admin123", hashBD);
+        //String nuevoHashGenerado = passwordEncoder.encode("admin123");
 
-        System.out.println("=================================================");
-        System.out.println(">>> USUARIO ENCONTRADO: " + cuenta.getEmail());
-        System.out.println(">>> HASH LEÍDO DE LA BD: [" + hashBD + "]");
-        System.out.println(">>> LONGITUD DEL HASH LEÍDO: " + (hashBD != null ? hashBD.length() : 0));
-        System.out.println(">>> ¿COINCIDE CON 'admin123'?: " + coincide);
-        System.out.println(">>> HASH VÁLIDO GENERADO AHORA: " + nuevoHashGenerado);
-        System.out.println("=================================================");
+       // System.out.println("=================================================");
+        //System.out.println(">>> USUARIO ENCONTRADO: " + cuenta.getEmail());
+        //System.out.println(">>> HASH LEÍDO DE LA BD: [" + hashBD + "]");
+       // System.out.println(">>> LONGITUD DEL HASH LEÍDO: " + (hashBD != null ? hashBD.length() : 0));
+        //System.out.println(">>> ¿COINCIDE CON 'admin123'?: " + coincide);
+       // System.out.println(">>> HASH VÁLIDO GENERADO AHORA: " + nuevoHashGenerado);
+        //System.out.println("=================================================");
 
         return new User(
                 cuenta.getEmail(),

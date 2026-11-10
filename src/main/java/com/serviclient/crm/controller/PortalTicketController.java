@@ -4,19 +4,30 @@ import com.serviclient.crm.dto.PortalTicketDto;
 import com.serviclient.crm.entity.Contacto;
 import com.serviclient.crm.entity.CuentaPortal;
 import com.serviclient.crm.entity.Ticket;
+import com.serviclient.crm.entity.TicketAdjunto;
 import com.serviclient.crm.entity.enums.CategoriaTicket;
 import com.serviclient.crm.entity.enums.PrioridadTicket;
 import com.serviclient.crm.repository.CuentaPortalRepository;
+import com.serviclient.crm.service.IPortalTicketService;
 import com.serviclient.crm.service.ITicketService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.Principal;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -25,6 +36,8 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -32,25 +45,29 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * Controlador MVC del Portal de Clientes para la gestión de tickets.
  *
  * <p>Permite a los clientes autenticados mediante {@link CuentaPortal} crear
- * nuevas incidencias y consultar el detalle de sus tickets existentes.
+ * nuevas incidencias adjuntando archivos, visualizar adjuntos y consultar el detalle de sus tickets.
  *
  * <p><b>Rutas expuestas:</b>
  * <pre>
- * GET  /portal/tickets/nuevo  → Formulario de nueva incidencia
- * POST /portal/tickets        → Registrar nueva incidencia
- * GET  /portal/tickets/{id}   → Detalle del ticket del cliente
+ * GET  /portal/tickets/nuevo                           → Formulario de nueva incidencia
+ * POST /portal/tickets                                 → Registrar nueva incidencia con adjuntos
+ * GET  /portal/tickets/{id}                            → Detalle del ticket del cliente
+ * GET  /portal/tickets/{ticketId}/adjuntos/{adjuntoId} → Descargar/visualizar archivo adjunto
  * </pre>
  *
  * @author ServiClient Dev Team
  * @version 1.0.0
+ * @see com.serviclient.crm.service.IPortalTicketService
  * @see com.serviclient.crm.service.ITicketService
  */
 @Controller
 @RequestMapping("/portal/tickets")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "Portal de Clientes", description = "Gestión de incidencias del portal")
 public class PortalTicketController {
 
+    private final IPortalTicketService portalTicketService;
     private final ITicketService ticketService;
     private final CuentaPortalRepository cuentaPortalRepository;
 
@@ -74,7 +91,8 @@ public class PortalTicketController {
     }
 
     /**
-     * Procesa el formulario, crea el ticket y prepara los datos para el modal de confirmación.
+     * Procesa el formulario, delega la persistencia del ticket y archivos a PortalTicketService,
+     * y prepara los datos para el modal de confirmación.
      */
     @Operation(summary = "Registrar nueva incidencia")
     @ApiResponse(responseCode = "302", description = "Redirección con modal de éxito")
@@ -82,6 +100,7 @@ public class PortalTicketController {
     public String registrarIncidencia(
             @Valid @ModelAttribute("ticketForm") PortalTicketDto ticketForm,
             BindingResult bindingResult,
+            @RequestParam(value = "archivos", required = false) MultipartFile[] archivos,
             Model model,
             Principal principal,
             RedirectAttributes redirectAttributes) {
@@ -95,18 +114,26 @@ public class PortalTicketController {
             return "portal/nueva-incidencia";
         }
 
-        // Crear ticket a través de tu servicio de negocio
-        Ticket ticketCreado = ticketService.crearTicketDesdePortal(ticketForm, cuenta);
+        try {
+            Ticket ticketCreado = portalTicketService.crearTicketDesdePortal(cuenta, ticketForm, archivos);
 
-        // Atributos flash para activar la ventana emergente en 'nueva-incidencia.html'
-        redirectAttributes.addFlashAttribute("ticketCreadoExito", true);
-        redirectAttributes.addFlashAttribute("ticketId", ticketCreado.getId());
-        redirectAttributes.addFlashAttribute("ticketNumero", ticketCreado.getNumeroTicket());
-        redirectAttributes.addFlashAttribute("ticketAsunto", ticketCreado.getAsunto());
-        redirectAttributes.addFlashAttribute("ticketPrioridad", 
-                ticketCreado.getPrioridad() != null ? ticketCreado.getPrioridad().getEtiqueta() : "Media");
-        redirectAttributes.addFlashAttribute("ticketEstado", 
-                ticketCreado.getEstado() != null ? ticketCreado.getEstado().getEtiqueta() : "Abierto (En espera de asignación)");
+            redirectAttributes.addFlashAttribute("ticketCreadoExito", true);
+            redirectAttributes.addFlashAttribute("ticketId", ticketCreado.getId());
+            redirectAttributes.addFlashAttribute("ticketNumero", ticketCreado.getNumeroTicket());
+            redirectAttributes.addFlashAttribute("ticketAsunto", ticketCreado.getAsunto());
+            redirectAttributes.addFlashAttribute("ticketPrioridad", 
+                    ticketCreado.getPrioridad() != null ? ticketCreado.getPrioridad().getEtiqueta() : "Media");
+            redirectAttributes.addFlashAttribute("ticketEstado", 
+                    ticketCreado.getEstado() != null ? ticketCreado.getEstado().getEtiqueta() : "Abierto (En espera de asignación)");
+
+        } catch (IllegalArgumentException | IllegalStateException | IOException ex) {
+            log.error("Error al procesar ticket o archivos adjuntos desde portal", ex);
+            cargarDatosUsuarioAutenticado(model, cuenta);
+            model.addAttribute("categorias", CategoriaTicket.values());
+            model.addAttribute("prioridades", PrioridadTicket.values());
+            model.addAttribute("errorMessage", ex.getMessage());
+            return "portal/nueva-incidencia";
+        }
 
         return "redirect:/portal/tickets/nuevo";
     }
@@ -140,6 +167,59 @@ public class PortalTicketController {
         model.addAttribute("ticket", ticket);
 
         return "portal/detalle-ticket";
+    }
+
+    /**
+     * Transmite el archivo adjunto almacenado en el disco para su descarga o previsualización en el navegador.
+     */
+    @Operation(summary = "Descargar o visualizar archivo adjunto del ticket")
+    @ApiResponse(responseCode = "200", description = "Archivo binario transmitido con éxito")
+    @ApiResponse(responseCode = "404", description = "Ticket o archivo adjunto no encontrado")
+    @GetMapping("/{ticketId}/adjuntos/{adjuntoId}")
+    public ResponseEntity<Resource> descargarAdjunto(
+            @PathVariable Long ticketId,
+            @PathVariable Long adjuntoId,
+            Principal principal) {
+
+        CuentaPortal cuenta = obtenerCuenta(principal);
+        Long clienteId = cuenta.getContacto().getCliente().getId();
+        Long empresaId = cuenta.getContacto().getCliente().getEmpresa().getId();
+
+        Ticket ticket = ticketService.obtenerPorIdYEmpresa(ticketId, empresaId);
+
+        if (!clienteId.equals(ticket.getCliente().getId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket no encontrado.");
+        }
+
+        TicketAdjunto adjunto = ticket.getAdjuntos().stream()
+                .filter(a -> a.getId().equals(adjuntoId))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Adjunto no encontrado."));
+
+        try {
+            Path rutaArchivo = Paths.get(adjunto.getUrlArchivo());
+            Resource recurso = new UrlResource(rutaArchivo.toUri());
+
+            if (!recurso.exists() || !recurso.isReadable()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "El archivo físico no está disponible en el servidor.");
+            }
+
+            MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+            if (adjunto.getTipoArchivo() != null && !adjunto.getTipoArchivo().isBlank()) {
+                try {
+                    mediaType = MediaType.parseMediaType(adjunto.getTipoArchivo());
+                } catch (Exception ignored) {}
+            }
+
+            return ResponseEntity.ok()
+                    .contentType(mediaType)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + adjunto.getNombreArchivo() + "\"")
+                    .body(recurso);
+
+        } catch (Exception ex) {
+            log.error("Error al leer el archivo adjunto id={}", adjuntoId, ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al servir el archivo adjunto.");
+        }
     }
 
     /**

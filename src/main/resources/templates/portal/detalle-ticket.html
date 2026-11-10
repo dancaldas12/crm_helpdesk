@@ -17,7 +17,7 @@
     <!-- COLUMNA IZQUIERDA: SIDEBAR OSCURA -->
     <aside class="w-64 bg-[#0f172a] text-slate-300 flex flex-col justify-between p-4 flex-shrink-0">
         <div>
-            <!-- Logo ServiClient con Indigo -->
+            <!-- Logo ServiClient -->
             <div class="flex items-center gap-3 px-2 py-4 mb-6 border-b border-slate-800">
                 <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-xl shadow-md shadow-indigo-600/30">
                     <i class="fa-solid fa-tv"></i>
@@ -66,13 +66,11 @@
                 </div>
 
                 <nav class="space-y-1">
-                    <!-- Botón para abrir modal Mi Cuenta -->
                     <button type="button" id="openMiCuentaModalBtn" class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition text-left">
                         <i class="fa-regular fa-user text-slate-400 w-4 text-center"></i>
                         <span>Mi cuenta</span>
                     </button>
 
-                    <!-- Botón para abrir modal Cambiar Contraseña -->
                     <button type="button" id="openPasswordModalBtn" class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition text-left">
                         <i class="fa-solid fa-lock text-slate-400 w-4 text-center"></i>
                         <span>Cambiar contraseña</span>
@@ -135,37 +133,31 @@
         <!-- CONTENIDO DEL TICKET -->
         <main class="p-8 max-w-7xl mx-auto w-full space-y-6">
 
-            <!-- CABECERA DEL TICKET (TARJETA BLANCA SUPERIOR) -->
+            <!-- CABECERA DEL TICKET -->
             <section class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div class="space-y-3">
-                    <!-- Badges / Tags -->
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="px-2.5 py-1 rounded-full text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200"
                               th:text="${ticket.numeroTicket}">TK-4005</span>
 
-                        <!-- Estado Dinámico -->
                         <span class="px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5"
                               th:classappend="${ticket.estado != null ? ticket.estado.cssClass : 'badge-status-open'}">
                             <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
                             <span th:text="${ticket.estado != null ? ticket.estado.etiqueta : 'Abierto'}">Resuelto</span>
                         </span>
 
-                        <!-- Urgencia / Prioridad Dinámica -->
                         <span class="px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1"
                               th:classappend="${ticket.prioridad != null ? ticket.prioridad.cssClass : 'badge-priority-medium'}">
                             <span class="font-bold">!</span>
                             <span th:text="${'Urgencia ' + (ticket.prioridad != null ? ticket.prioridad.etiqueta : 'Media')}">Urgencia Media</span>
                         </span>
 
-                        <!-- Categoría -->
                         <span class="px-2.5 py-1 rounded-full text-xs font-medium text-slate-600 bg-slate-100 border border-slate-200"
                               th:text="${'Categoría: ' + (ticket.categoriaEntity != null ? ticket.categoriaEntity.nombre : 'Facturación & Cobranzas')}">Categoría: Facturación & Cobranzas</span>
                     </div>
 
-                    <!-- Título Asunto -->
                     <h1 class="text-2xl font-bold text-slate-900 tracking-tight" th:text="${ticket.asunto}">Actualización de razón social en comprobantes fiscales</h1>
 
-                    <!-- Metadatos de Creación y Reporte -->
                     <p class="text-xs text-slate-500">
                         <span>Creado el: </span>
                         <span class="text-slate-700 font-medium" 
@@ -177,7 +169,6 @@
                     </p>
                 </div>
 
-                <!-- Sello ServiClient en Índigo -->
                 <div class="flex-shrink-0 self-start md:self-auto">
                     <div class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold">
                         <i class="fa-solid fa-shield-halved text-indigo-600"></i>
@@ -206,7 +197,7 @@
                         <!-- Mensajes -->
                         <div class="p-6 space-y-6">
                             
-                            <!-- Descripción inicial como primer mensaje si la lista de mensajes está vacía -->
+                            <!-- Descripción inicial como primer mensaje si no hay mensajes en la lista -->
                             <div th:if="${#lists.isEmpty(ticket.mensajes)}" class="flex items-start gap-3.5">
                                 <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center flex-shrink-0"
                                      th:text="${usuarioIniciales}">MV</div>
@@ -224,7 +215,7 @@
                                 </div>
                             </div>
 
-                            <!-- Renderizado de mensajes registrados -->
+                            <!-- Mensajes registrados -->
                             <th:block th:each="msg : ${ticket.mensajes}">
                                 <!-- Mensaje del Cliente -->
                                 <div th:if="${msg.tipo != null and msg.tipo.name() == 'CLIENTE'}" class="flex items-start gap-3.5">
@@ -244,7 +235,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Mensaje del Agente de Soporte (burbuja índigo) -->
+                                <!-- Mensaje del Agente -->
                                 <div th:if="${msg.tipo != null and msg.tipo.name() == 'AGENTE'}" class="flex flex-col items-end gap-1.5">
                                     <div class="flex items-center gap-2 text-xs">
                                         <span class="text-slate-400 font-medium" 
@@ -261,12 +252,12 @@
                                 </div>
                             </th:block>
 
-                            <!-- Evento de cambio de estado -->
+                            <!-- Badge de estado actual -->
                             <div class="flex justify-center my-4">
                                 <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs text-slate-600 font-medium">
                                     <i class="fa-solid fa-arrows-left-right text-slate-400"></i>
-                                    <span th:text="${(ticket.agente != null ? ticket.agente.nombreCompleto : 'Ana Silva') + ' cambió el estado a: '}">Ana Silva cambió el estado a:</span>
-                                    <span class="font-bold text-slate-800" th:text="${ticket.estado != null ? ticket.estado.etiqueta : 'Resuelto'}">Resuelto</span>
+                                    <span th:text="${(ticket.agente != null ? ticket.agente.nombreCompleto : 'Soporte') + ' cambió el estado a: '}">Soporte cambió el estado a:</span>
+                                    <span class="font-bold text-slate-800" th:text="${ticket.estado != null ? ticket.estado.etiqueta : 'Abierto'}">Abierto</span>
                                 </div>
                             </div>
 
@@ -345,7 +336,7 @@
                             </div>
                             <div class="flex items-center justify-between">
                                 <dt class="text-slate-400 font-medium">Última actualización</dt>
-                                <dd class="font-semibold text-slate-800">Hace 2 horas</dd>
+                                <dd class="font-semibold text-slate-800">Reciente</dd>
                             </div>
                         </dl>
                     </div>
@@ -374,9 +365,9 @@
                                         <p class="text-[10px] text-slate-400" th:text="${adj.tamano != null ? (adj.tamano / 1024) + ' KB' : 'Adjunto'}">24 KB</p>
                                     </div>
                                 </div>
-                                <a th:href="${adj.urlArchivo}" target="_blank" class="text-slate-400 hover:text-slate-700 p-1">
-                                    <i class="fa-solid fa-download text-xs"></i>
-                                </a>
+                                <a th:href="@{'/portal/tickets/' + ${ticket.id} + '/adjuntos/' + ${adj.id}}" target="_blank" class="text-slate-400 hover:text-slate-700 p-1">
+    <i class="fa-solid fa-download text-xs"></i>
+</a>
                             </div>
                         </div>
                     </div>
@@ -388,41 +379,26 @@
                             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">Historial del ticket</h3>
                         </div>
 
-                        <div class="relative pl-5 space-y-5 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                            <div class="relative">
+                        <!-- Si no hay historial aún -->
+                        <div th:if="${#lists.isEmpty(ticket.historial)}" class="py-4 text-center text-slate-400 text-xs">
+                            <i class="fa-regular fa-clock text-xl mb-1 block text-slate-300"></i>
+                            Sin eventos registrados en este ticket.
+                        </div>
+
+                        <!-- Línea de tiempo dinámica -->
+                        <div th:if="${!#lists.isEmpty(ticket.historial)}" class="relative pl-5 space-y-5 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                            <div th:each="h : ${ticket.historial}" class="relative">
                                 <span class="absolute -left-5 top-1 w-2.5 h-2.5 rounded-full bg-indigo-600 ring-4 ring-white"></span>
                                 <div class="text-xs space-y-0.5">
-                                    <p class="font-bold text-slate-900">Respuesta enviada por soporte</p>
-                                    <p class="text-slate-500 text-[11px]">Ana Silva indicó actualización en plantilla</p>
-                                    <p class="text-slate-400 text-[10px]">19 Oct, 2026 • 03:25 PM</p>
-                                </div>
-                            </div>
-
-                            <div class="relative">
-                                <span class="absolute -left-5 top-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-white"></span>
-                                <div class="text-xs space-y-0.5">
-                                    <p class="font-bold text-slate-900">Estado actualizado</p>
-                                    <p class="text-slate-500 text-[11px]">Cambiado a <span class="font-semibold text-emerald-700">Resuelto</span></p>
-                                    <p class="text-slate-400 text-[10px]">19 Oct, 2026 • 03:25 PM</p>
-                                </div>
-                            </div>
-
-                            <div class="relative">
-                                <span class="absolute -left-5 top-1 w-2.5 h-2.5 rounded-full bg-slate-400 ring-4 ring-white"></span>
-                                <div class="text-xs space-y-0.5">
-                                    <p class="font-bold text-slate-900">Ticket asignado</p>
-                                    <p class="text-slate-500 text-[11px]">Asignado a agente Ana Silva</p>
-                                    <p class="text-slate-400 text-[10px]">19 Oct, 2026 • 03:20 PM</p>
-                                </div>
-                            </div>
-
-                            <div class="relative">
-                                <span class="absolute -left-5 top-1 w-2.5 h-2.5 rounded-full bg-indigo-500 ring-4 ring-white"></span>
-                                <div class="text-xs space-y-0.5">
-                                    <p class="font-bold text-slate-900">Ticket creado</p>
-                                    <p class="text-slate-500 text-[11px]" th:text="${'Creado por ' + (ticket.contacto != null ? ticket.contacto.nombreCompleto : usuarioNombre) + ' desde el Portal'}">Creado por Mariana Vargas desde el Portal</p>
+                                    <p class="font-bold text-slate-900" th:text="${h.tipoEvento}">Ticket creado</p>
+                                    <p class="text-slate-500 text-[11px]" 
+                                       th:text="${h.descripcion != null ? h.descripcion : (h.valorNuevo != null ? h.valorNuevo : '')}">
+                                        Descripción del evento
+                                    </p>
                                     <p class="text-slate-400 text-[10px]" 
-                                       th:text="${ticket.createdAt != null ? (#temporals.format(ticket.createdAt, 'dd MMM, yyyy') + ' • ' + #temporals.format(ticket.createdAt, 'hh:mm a')) : '19 Oct, 2026 • 03:16 PM'}">19 Oct, 2026 • 03:16 PM</p>
+                                       th:text="${h.createdAt != null ? (#temporals.format(h.createdAt, 'dd MMM, yyyy') + ' • ' + #temporals.format(h.createdAt, 'hh:mm a')) : ''}">
+                                        08 Nov, 2026 • 07:27 PM
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -435,13 +411,10 @@
         </main>
     </div>
 
-    <!-- ========================================================================= -->
     <!-- MODAL FLOTANTE: MI CUENTA -->
-    <!-- ========================================================================= -->
     <div id="miCuentaModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full p-6 sm:p-7 relative animate-in fade-in zoom-in duration-150">
             
-            <!-- Header con icono y boton X -->
             <div class="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div class="flex items-center gap-2.5">
                     <div class="w-9 h-9 rounded-xl bg-purple-50 text-indigo-600 flex items-center justify-center text-sm shadow-sm">
@@ -454,7 +427,6 @@
                 </button>
             </div>
 
-            <!-- Tarjeta Perfil Superior -->
             <div class="mt-5 p-4 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center gap-3.5">
                 <div class="w-12 h-12 rounded-full bg-indigo-600 text-white font-bold text-sm flex items-center justify-center flex-shrink-0 shadow-sm"
                      th:text="${usuarioIniciales}">MV</div>
@@ -473,23 +445,19 @@
                 </div>
             </div>
 
-            <!-- Formulario / Datos del Perfil -->
             <div class="mt-5 space-y-4 text-xs">
-                <!-- Nombre Completo -->
                 <div>
                     <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Nombre Completo</label>
                     <input type="text" readonly th:value="${usuarioNombre}" 
                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-none">
                 </div>
 
-                <!-- Correo Electrónico -->
                 <div>
                     <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Correo Electrónico</label>
                     <input type="text" readonly th:value="${usuarioEmail}" 
                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-none">
                 </div>
 
-                <!-- Fila Empresa y Usuario/ID -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <div class="flex justify-between items-center mb-1.5">
@@ -515,7 +483,6 @@
                 </div>
             </div>
 
-            <!-- Botones de Acción Inferiores -->
             <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
                 <button type="button" id="switchToPasswordModalBtn" 
                         class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition">
@@ -531,9 +498,7 @@
         </div>
     </div>
 
-    <!-- ========================================================================= -->
     <!-- MODAL FLOTANTE: CAMBIAR CONTRASEÑA -->
-    <!-- ========================================================================= -->
     <div id="passwordModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full p-6 sm:p-8 relative">
             
@@ -551,7 +516,6 @@
                 </div>
             </div>
 
-            <!-- Alertas Flash -->
             <div th:if="${modalPasswordError}" class="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
                 <i class="fa-solid fa-circle-exclamation text-rose-500"></i>
                 <span th:text="${modalPasswordError}"></span>
@@ -595,22 +559,18 @@
         const userBtn = document.getElementById('userDropdownBtn');
         const userDropdown = document.getElementById('userDropdown');
 
-        // Modales
         const miCuentaModal = document.getElementById('miCuentaModal');
         const passModal = document.getElementById('passwordModal');
 
-        // Botones Mi Cuenta
         const openMiCuentaBtn = document.getElementById('openMiCuentaModalBtn');
         const closeMiCuentaBtn = document.getElementById('closeMiCuentaModalBtn');
         const closeMiCuentaFooterBtn = document.getElementById('closeMiCuentaFooterBtn');
         const switchToPassBtn = document.getElementById('switchToPasswordModalBtn');
 
-        // Botones Password
         const openPassBtn = document.getElementById('openPasswordModalBtn');
         const closePassBtn = document.getElementById('closePasswordModalBtn');
         const cancelPassBtn = document.getElementById('cancelPasswordModalBtn');
 
-        // 1. Alternar Dropdown de Usuario
         if (userBtn && userDropdown) {
             userBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -623,7 +583,6 @@
             });
         }
 
-        // 2. Funciones de Apertura / Cierre
         function abrirMiCuenta() {
             if (miCuentaModal) miCuentaModal.classList.remove('hidden');
             if (userDropdown) userDropdown.classList.add('hidden');
@@ -641,18 +600,15 @@
             if (passModal) passModal.classList.add('hidden');
         }
 
-        // Eventos Mi Cuenta
         if (openMiCuentaBtn) openMiCuentaBtn.addEventListener('click', abrirMiCuenta);
         if (closeMiCuentaBtn) closeMiCuentaBtn.addEventListener('click', cerrarMiCuenta);
         if (closeMiCuentaFooterBtn) closeMiCuentaFooterBtn.addEventListener('click', cerrarMiCuenta);
         if (switchToPassBtn) switchToPassBtn.addEventListener('click', abrirPassword);
 
-        // Eventos Password
         if (openPassBtn) openPassBtn.addEventListener('click', abrirPassword);
         if (closePassBtn) closePassBtn.addEventListener('click', cerrarPassword);
         if (cancelPassBtn) cancelPassBtn.addEventListener('click', cerrarPassword);
 
-        // Cerrar al hacer clic en el backdrop oscuro
         if (miCuentaModal) {
             miCuentaModal.addEventListener('click', (e) => {
                 if (e.target === miCuentaModal) cerrarMiCuenta();

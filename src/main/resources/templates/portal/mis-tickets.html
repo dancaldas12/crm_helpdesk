@@ -39,7 +39,7 @@
 
             <!-- Navegación -->
             <nav class="space-y-1">
-                <a th:href="@{/portal/mistickets}" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-600 text-white font-medium shadow-md shadow-indigo-600/20">
+                <a th:href="@{/portal/mis-tickets}" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-600 text-white font-medium shadow-md shadow-indigo-600/20">
                     <i class="fa-solid fa-ticket text-lg"></i>
                     <span>Mis tickets</span>
                 </a>
@@ -194,7 +194,7 @@
             </div>
 
             <!-- Filtros de búsqueda -->
-            <form th:action="@{/portal/mistickets}" method="get" class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+            <form th:action="@{/portal/mis-tickets}" method="get" class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
                 <div class="flex-1 relative">
                     <i class="fa-solid fa-magnifying-glass absolute left-4 top-3 text-slate-400 text-sm"></i>
                     <input type="text" name="busqueda" th:value="${busqueda}" placeholder="Buscar tickets, código, asunto..." 
