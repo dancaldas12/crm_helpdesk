@@ -96,14 +96,6 @@ public class DashboardService implements IDashboardService {
             }
         }
 
-        if (totalClientes == 0) {
-            totalClientes = 124;
-            saludables = 82;
-            observacion = 24;
-            enRiesgo = 18;
-            nuevosEsteMes = 5;
-        }
-
         double saludablesPct = totalClientes > 0 ? (saludables * 100.0 / totalClientes) : 0.0;
         double observacionPct = totalClientes > 0 ? (observacion * 100.0 / totalClientes) : 0.0;
         double riesgoPct = totalClientes > 0 ? (enRiesgo * 100.0 / totalClientes) : 0.0;
@@ -134,15 +126,6 @@ public class DashboardService implements IDashboardService {
         }
 
         long totalTickets = tickets.size();
-        if (totalTickets == 0) {
-            totalTickets = 124;
-            ticketsAbiertos = 124;
-            ticketsEnProceso = 45;
-            ticketsPendientes = 67;
-            ticketsCriticos = 12;
-            ticketsFueraSla = 3;
-            ticketsResueltos = 312;
-        }
 
         // 3. Satisfacción CSAT
         List<EncuestaCsat> encuestas = encuestaCsatRepository.findByEmpresaId(empresaId);
@@ -166,22 +149,20 @@ public class DashboardService implements IDashboardService {
             }
         }
 
-        double csatPromedio = totalConPuntuacion > 0 ? (sumaPuntuaciones / totalConPuntuacion) : 4.3;
+        double csatPromedio = totalConPuntuacion > 0
+        ? sumaPuntuaciones / totalConPuntuacion
+        : 0.0;
         int csatPorcentaje = (int) Math.round((csatPromedio / 5.0) * 100);
-        if (encuestasRespondidas == 0) {
-            encuestasRespondidas = 82;
-            csatPorcentaje = 86;
-            bajaSatisfaccionCount = 7;
-            encuestasPendientes = 11;
-            csatPromedio = 4.3;
-        }
 
         int estrellasEnteras = (int) Math.floor(csatPromedio);
         boolean tieneMediaEstrella = (csatPromedio - estrellasEnteras) >= 0.3;
 
-        String nivelCalificacion = csatPromedio >= 4.5 ? "Calificación excelente" :
-                                   csatPromedio >= 4.0 ? "Calificación sobresaliente" :
-                                   csatPromedio >= 3.0 ? "Calificación aceptable" : "Requiere atención";
+        String nivelCalificacion = totalConPuntuacion == 0
+                ? "Sin encuestas respondidas"
+                : csatPromedio >= 4.5 ? "Calificación excelente"
+                : csatPromedio >= 4.0 ? "Calificación sobresaliente"
+                : csatPromedio >= 3.0 ? "Calificación aceptable"
+                : "Requiere atención";
 
         // 4. Renovaciones
         List<Renovacion> renovaciones = renovacionRepository.findByEmpresaIdOrderByFechaVencimientoAsc(empresaId);
@@ -231,7 +212,7 @@ public class DashboardService implements IDashboardService {
                     break;
             }
 
-            if (matchesTab || (tablaRenovaciones.size() < 4 && tabRenovacion.equals("MENOR_30"))) {
+            if (matchesTab) {
                 Cliente c = r.getCliente();
                 int hs = (c != null) ? c.getHealthScore() : 80;
                 String hsEstado = (hs >= 70) ? "Saludable" : (hs >= 50) ? "En observación" : "En riesgo";
@@ -271,97 +252,55 @@ public class DashboardService implements IDashboardService {
             }
         }
 
-        if (menor30 == 0 && entre31y90 == 0 && mayor90 == 0) {
-            menor30 = 12;
-            entre31y90 = 45;
-            mayor90 = 128;
-            completadas = 89;
-            noRealizadas = 4;
-        }
-
-        if (tablaRenovaciones.isEmpty()) {
-            tablaRenovaciones.add(RenovacionItemDto.builder()
-                    .id(1L)
-                    .clienteNombre("TechCorp Industries")
-                    .servicioNombre("Licencia Enterprise")
-                    .diasRestantes(12)
-                    .diasRestantesTexto("12 días restantes")
-                    .diasRestantesBadgeClass("dias-danger")
-                    .responsableNombre("Ana Silva")
-                    .estado("En negociación")
-                    .estadoBadgeClass("badge-purple")
-                    .healthScore(45)
-                    .healthScoreEstado("En riesgo")
-                    .healthScoreBadgeClass("hs-riesgo")
-                    .build());
-
-            tablaRenovaciones.add(RenovacionItemDto.builder()
-                    .id(2L)
-                    .clienteNombre("Global Logistics SA")
-                    .servicioNombre("Soporte Premium 24/7")
-                    .diasRestantes(25)
-                    .diasRestantesTexto("25 días restantes")
-                    .diasRestantesBadgeClass("dias-warning")
-                    .responsableNombre("Carlos Ruiz")
-                    .estado("Pendiente")
-                    .estadoBadgeClass("badge-warning")
-                    .healthScore(85)
-                    .healthScoreEstado("Saludable")
-                    .healthScoreBadgeClass("hs-saludable")
-                    .build());
-
-            tablaRenovaciones.add(RenovacionItemDto.builder()
-                    .id(3L)
-                    .clienteNombre("Grupo Financiero Sur")
-                    .servicioNombre("Módulo Analytics")
-                    .diasRestantes(32)
-                    .diasRestantesTexto("32 días restantes")
-                    .diasRestantesBadgeClass("dias-neutral")
-                    .responsableNombre("María López")
-                    .estado("Pendiente")
-                    .estadoBadgeClass("badge-warning")
-                    .healthScore(95)
-                    .healthScoreEstado("Saludable")
-                    .healthScoreBadgeClass("hs-saludable")
-                    .build());
-        }
-
         // 5. Alertas y Pendientes
+        
         List<AlertaItemDto> alertas = new ArrayList<>();
-        alertas.add(AlertaItemDto.builder()
-                .titulo(ticketsCriticos + " tickets críticos")
-                .descripcion("Requieren atención inmediata de los ingenieros asignados")
-                .tipoColor("danger")
-                .enlaceUrl("/tickets?prioridad=CRITICA")
-                .build());
 
-        alertas.add(AlertaItemDto.builder()
-                .titulo(enRiesgo + " clientes en riesgo")
-                .descripcion("Revisar factores que afectan su Health Score")
-                .tipoColor("danger")
-                .enlaceUrl("/clientes")
-                .build());
+        if (ticketsCriticos > 0) {
+            alertas.add(AlertaItemDto.builder()
+                    .titulo(ticketsCriticos + " tickets críticos")
+                    .descripcion("Requieren atención inmediata")
+                    .tipoColor("danger")
+                    .enlaceUrl("/tickets?prioridad=CRITICA")
+                    .build());
+        }
 
-        alertas.add(AlertaItemDto.builder()
-                .titulo(menor30 + " renovaciones próximas")
-                .descripcion("Vencen en los próximos 30 días")
-                .tipoColor("warning")
-                .enlaceUrl("/renovaciones")
-                .build());
+        if (enRiesgo > 0) {
+            alertas.add(AlertaItemDto.builder()
+                    .titulo(enRiesgo + " clientes en riesgo")
+                    .descripcion("Revisar su Health Score")
+                    .tipoColor("danger")
+                    .enlaceUrl("/clientes")
+                    .build());
+        }
 
-        alertas.add(AlertaItemDto.builder()
-                .titulo(bajaSatisfaccionCount + " clientes con baja satisfacción")
-                .descripcion("Revisar las últimas encuestas CSAT y coordinar llamada")
-                .tipoColor("warning")
-                .enlaceUrl("/clientes")
-                .build());
+        if (menor30 > 0) {
+            alertas.add(AlertaItemDto.builder()
+                    .titulo(menor30 + " renovaciones próximas")
+                    .descripcion("Vencen en los próximos 30 días")
+                    .tipoColor("warning")
+                    .enlaceUrl("/renovaciones")
+                    .build());
+        }
 
-        alertas.add(AlertaItemDto.builder()
-                .titulo(encuestasPendientes + " encuestas pendientes")
-                .descripcion("Esperando respuesta del cliente")
-                .tipoColor("neutral")
-                .enlaceUrl("/tickets")
-                .build());
+        if (bajaSatisfaccionCount > 0) {
+            alertas.add(AlertaItemDto.builder()
+                    .titulo(bajaSatisfaccionCount + " encuestas con baja satisfacción")
+                    .descripcion("Revisar las respuestas recibidas")
+                    .tipoColor("warning")
+                    .enlaceUrl("/clientes")
+                    .build());
+        }
+
+        if (encuestasPendientes > 0) {
+            alertas.add(AlertaItemDto.builder()
+                    .titulo(encuestasPendientes + " encuestas pendientes")
+                    .descripcion("Esperando respuesta del cliente")
+                    .tipoColor("neutral")
+                    .enlaceUrl("/tickets")
+                    .build());
+        }
+
 
         // 6. Actividad Reciente
         List<ActividadItemDto> actividad = new ArrayList<>();
@@ -394,54 +333,6 @@ public class DashboardService implements IDashboardService {
                         .tiempoFormateado(tiempo)
                         .build());
             }
-        }
-
-        if (actividad.size() < 5) {
-            actividad.clear();
-            actividad.add(ActividadItemDto.builder()
-                    .titulo("Nuevo ticket crítico registrado por NovaTech Industries")
-                    .detalle("Responsable: Soporte L2")
-                    .tipoIcono("ticket-critico")
-                    .badgeTexto("Crítico")
-                    .badgeColorClass("badge-danger")
-                    .tiempoFormateado("Hoy, 14:32")
-                    .build());
-
-            actividad.add(ActividadItemDto.builder()
-                    .titulo("Encuesta CSAT recibida: 5/5")
-                    .detalle("Cliente: InnovaSoft")
-                    .tipoIcono("csat-recibido")
-                    .badgeTexto("Excelente")
-                    .badgeColorClass("badge-success")
-                    .tiempoFormateado("Hoy, 12:15")
-                    .build());
-
-            actividad.add(ActividadItemDto.builder()
-                    .titulo("Nuevo cliente registrado: FinTech Solutions")
-                    .detalle("Responsable: Ventas")
-                    .tipoIcono("cliente-nuevo")
-                    .badgeTexto("Onboarding")
-                    .badgeColorClass("badge-info")
-                    .tiempoFormateado("Hoy, 10:40")
-                    .build());
-
-            actividad.add(ActividadItemDto.builder()
-                    .titulo("Renovación actualizada a \"En negociación\"")
-                    .detalle("Cliente: TechCorp Industries · Resp: Ana Silva")
-                    .tipoIcono("renovacion-cambio")
-                    .badgeTexto("Negociación")
-                    .badgeColorClass("badge-purple")
-                    .tiempoFormateado("Ayer, 17:42")
-                    .build());
-
-            actividad.add(ActividadItemDto.builder()
-                    .titulo("Ticket TK-4018 marcado como resuelto")
-                    .detalle("Cliente: CloudNet Corp · Resp: Javier Ramos")
-                    .tipoIcono("ticket-resuelto")
-                    .badgeTexto("Resuelto")
-                    .badgeColorClass("badge-success")
-                    .tiempoFormateado("Ayer, 15:20")
-                    .build());
         }
 
         return DashboardDto.builder()
