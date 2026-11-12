@@ -7,9 +7,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "encuestas_csat", uniqueConstraints = {
-    @UniqueConstraint(name = "uq_encuesta_ticket", columnNames = {"ticket_id"})
-}, indexes = {
+@Table(name = "encuestas_csat", indexes = {
     @Index(name = "idx_encuesta_cliente", columnList = "cliente_id"),
     @Index(name = "idx_encuesta_estado", columnList = "estado"),
     @Index(name = "idx_encuesta_empresa_estado", columnList = "empresa_id, estado")
@@ -63,6 +61,10 @@ public class EncuestaCsat {
     @OneToOne(mappedBy = "encuesta", cascade = CascadeType.ALL, orphanRemoval = true)
     private RespuestaCsat respuesta;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean activa = true;
+    
     @PrePersist
     public void prePersist() {
         if (this.createdAt == null) {
