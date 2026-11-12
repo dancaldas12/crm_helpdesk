@@ -520,6 +520,91 @@ mvn clean test
 
 ---
 
+## Análisis de Vulnerabilidades (OWASP Dependency-Check)
+
+El proyecto integra [OWASP Dependency-Check](https://owasp.org/www-project-dependency-check/) como plugin Maven. Se ejecuta en la fase `verify` y **falla el build** si detecta alguna dependencia con CVSS ≥ 7.0. Los reportes se generan en `target/dependency-check-report.html` (HTML) y `target/dependency-check-report.json` (JSON).
+
+### 1. Obtener la NVD API key (gratuita, ~5 min)
+
+> Desde 2023, la NVD (National Vulnerability Database) requiere autenticación para actualizar su base de CVEs. Sin clave el análisis no puede completarse.
+
+1. Ve a **https://nvd.nist.gov/developers/request-an-api-key**
+2. Completa el formulario con tu nombre y correo → recibirás el enlace de activación por email
+3. Copia tu clave (formato `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`)
+
+### 2. Guardar la clave en `.env` (nunca en el repositorio)
+
+```bash
+# Edita tu .env local — ya está cubierto por .gitignore
+NVD_API_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+```
+
+> ⚠️ **No pongas la clave real en `.env.example` ni en `pom.xml`.** El archivo `.env` está en `.gitignore`.
+
+### 3. Ejecutar el análisis
+
+**PowerShell:**
+```powershell
+$env:NVD_API_KEY = (Get-Content .env | Select-String "^NVD_API_KEY=(.+)").Matches.Groups[1].Value
+.\mvnw.cmd verify -DskipTests=true "-Dnvd.api.key=$env:NVD_API_KEY"
+```
+
+**Bash / Git Bash:**
+```bash
+export NVD_API_KEY=$(grep "^NVD_API_KEY=" .env | cut -d '=' -f2)
+./mvnw verify -DskipTests=true -Dnvd.api.key=$NVD_API_KEY
+```
+
+> **Primera ejecución:** ~10-15 min (descarga la base de datos NVD completa).
+> **Ejecuciones posteriores:** ~2-5 min (solo actualiza cambios recientes, caché en `~/.owasp/`).
+
+### 4. Ver el reporte
+
+```
+target/dependency-check-report.html   ← Abrir en el navegador
+target/dependency-check-report.json   ← Para integración con CI/CD
+```
+
+### Comportamiento del build
+
+| Escenario | Resultado |
+|---|---|
+| Sin vulnerabilidades CVSS ≥ 7 | `BUILD SUCCESS` |
+| Con vulnerabilidades CVSS ≥ 7 | `BUILD FAILURE` + reporte HTML con detalles |
+| NVD no responde (`failOnError=false`) | `BUILD SUCCESS` + advertencia en log |
+
+### Falsos positivos — Archivo de supresiones
+
+Si el reporte incluye CVEs que no aplican a tu uso, crea `dependency-check-suppressions.xml` en la raíz del proyecto:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+    <!--
+    <suppress>
+        <notes>Falso positivo: CVE-XXXX-YYYY no aplica porque...</notes>
+        <cve>CVE-XXXX-YYYY</cve>
+    </suppress>
+    -->
+</suppressions>
+```
+
+Este archivo **sí se versiona** para documentar las decisiones de supresión del equipo.
+
+### Integración en CI/CD (GitHub Actions)
+
+```yaml
+- name: OWASP Dependency-Check
+  run: ./mvnw verify -DskipTests=true -Dnvd.api.key=${{ secrets.NVD_API_KEY }}
+- name: Subir reporte
+  uses: actions/upload-artifact@v4
+  with:
+    name: dependency-check-report
+    path: target/dependency-check-report.html
+```
+
+---
+
 ## Modelo de Dominio
 
 ```
