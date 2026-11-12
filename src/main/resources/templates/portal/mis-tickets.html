@@ -179,9 +179,63 @@
             </div>
 
             <div class="flex items-center gap-4">
-                <button class="text-slate-400 hover:text-slate-600">
-                    <i class="fa-regular fa-bell text-lg"></i>
-                </button>
+                <!-- Notificaciones Dropdown -->
+                <div class="relative">
+                    <button id="notificationBtn" type="button"
+                        class="text-slate-400 hover:text-slate-600 relative transition">
+                        <i class="fa-regular fa-bell text-lg"></i>
+                        <!-- Indicador rojo (Badge) -->
+                        <span th:if="${encuestasPendientes != null and encuestasPendientes.size() > 0}"
+                            class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm"
+                            th:text="${encuestasPendientes.size()}">1</span>
+                    </button>
+
+                    <!-- Menú Desplegable -->
+                    <div id="notificationDropdown"
+                        class="hidden absolute top-full right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
+                        <div class="p-3 border-b border-slate-100 bg-slate-50">
+                            <h4 class="text-[11px] font-bold text-slate-800 uppercase tracking-wider">Notificaciones
+                            </h4>
+                        </div>
+                        <div class="max-h-72 overflow-y-auto">
+
+                            <!-- Lista de Encuestas Pendientes -->
+                            <div th:if="${encuestasPendientes != null and encuestasPendientes.size() > 0}">
+                                <button type="button" th:each="encuesta : ${encuestasPendientes}"
+                                    th:data-id="${encuesta.id}"
+                                    th:data-ticket="${encuesta.ticket != null ? encuesta.ticket.numeroTicket : ''}"
+                                    onclick="abrirModalEncuesta(this.getAttribute('data-id'), this.getAttribute('data-ticket'))"
+                                    class="w-full text-left p-4 border-b border-slate-50 hover:bg-slate-50 transition">
+                                    <div class="flex gap-3">
+                                        <div
+                                            class="w-8 h-8 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0 mt-1">
+                                            <i class="fa-solid fa-star text-xs"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs font-bold text-slate-800">Encuesta de servicio</p>
+                                            <p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                                                El ticket <span class="font-bold text-slate-700"
+                                                    th:text="${encuesta.ticket != null ? encuesta.ticket.numeroTicket : ''}"></span>
+                                                fue resuelto. ¡Déjanos tu opinión!
+                                            </p>
+                                            <p class="text-[10px] text-indigo-600 font-semibold mt-1">Calificar ahora →
+                                            </p>
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+
+                            <!-- Estado vacío -->
+                            <div th:if="${encuestasPendientes == null or encuestasPendientes.size() == 0}"
+                                class="p-6 text-center text-slate-400">
+                                <i class="fa-regular fa-bell-slash text-2xl mb-2 opacity-50"></i>
+                                <p class="text-xs">No tienes notificaciones nuevas.</p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex items-center gap-3 pl-4 border-l border-slate-200">
                     <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm"
                         th:text="${usuarioIniciales}">CL</div>
@@ -521,6 +575,70 @@
         </div>
     </div>
 
+    <!-- ========================================================================= -->
+    <!-- MODAL FLOTANTE: ENCUESTA CSAT -->
+    <!-- ========================================================================= -->
+    <div id="encuestaCsatModal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div
+            class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-sm w-full p-6 sm:p-8 relative text-center">
+
+            <button type="button" id="closeEncuestaModalBtn"
+                class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+
+            <div
+                class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center text-xl mx-auto mb-4">
+                <i class="fa-solid fa-face-smile"></i>
+            </div>
+
+            <h3 class="text-lg font-bold text-slate-900">¿Qué te pareció el servicio?</h3>
+            <p class="text-xs text-slate-500 mt-1 mb-5">Ticket <span id="csatTicketNumero"
+                    class="font-bold text-slate-700"></span></p>
+
+            <form th:action="@{/portal/mis-tickets/encuestas/responder}" method="post">
+                <input type="hidden" name="encuestaId" id="csatEncuestaId" value="">
+
+                <!-- Selector de Estrellas (Radio Buttons Ocultos) -->
+                <div class="flex justify-center gap-2 mb-6 flex-row-reverse" id="star-rating">
+                    <input type="radio" name="puntaje" id="star5" value="5" class="hidden peer/5" required>
+                    <label for="star5"
+                        class="cursor-pointer text-slate-300 peer-checked/5:text-amber-400 hover:text-amber-400 transition text-3xl"><i
+                            class="fa-solid fa-star"></i></label>
+
+                    <input type="radio" name="puntaje" id="star4" value="4" class="hidden peer/4">
+                    <label for="star4"
+                        class="cursor-pointer text-slate-300 peer-checked/4:text-amber-400 peer-checked/5:text-amber-400 hover:text-amber-400 transition text-3xl"><i
+                            class="fa-solid fa-star"></i></label>
+
+                    <input type="radio" name="puntaje" id="star3" value="3" class="hidden peer/3">
+                    <label for="star3"
+                        class="cursor-pointer text-slate-300 peer-checked/3:text-amber-400 peer-checked/4:text-amber-400 peer-checked/5:text-amber-400 hover:text-amber-400 transition text-3xl"><i
+                            class="fa-solid fa-star"></i></label>
+
+                    <input type="radio" name="puntaje" id="star2" value="2" class="hidden peer/2">
+                    <label for="star2"
+                        class="cursor-pointer text-slate-300 peer-checked/2:text-amber-400 peer-checked/3:text-amber-400 peer-checked/4:text-amber-400 peer-checked/5:text-amber-400 hover:text-amber-400 transition text-3xl"><i
+                            class="fa-solid fa-star"></i></label>
+
+                    <input type="radio" name="puntaje" id="star1" value="1" class="hidden peer/1">
+                    <label for="star1"
+                        class="cursor-pointer text-slate-300 peer-checked/1:text-amber-400 peer-checked/2:text-amber-400 peer-checked/3:text-amber-400 peer-checked/4:text-amber-400 peer-checked/5:text-amber-400 hover:text-amber-400 transition text-3xl"><i
+                            class="fa-solid fa-star"></i></label>
+                </div>
+
+                <textarea name="comentario" rows="3" placeholder="Comentario opcional..."
+                    class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition mb-4"></textarea>
+
+                <button type="submit"
+                    class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-md shadow-indigo-600/20 transition">
+                    Enviar Respuesta
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- SCRIPTS -->
     <script th:inline="javascript">
         const userBtn = document.getElementById('userDropdownBtn');
@@ -541,6 +659,16 @@
         const closePassBtn = document.getElementById('closePasswordModalBtn');
         const cancelPassBtn = document.getElementById('cancelPasswordModalBtn');
 
+        // Funcionalidad Dropdown Notificaciones
+        const notiBtn = document.getElementById('notificationBtn');
+        const notiDropdown = document.getElementById('notificationDropdown');
+
+        // Funcionalidad Modal Encuesta CSAT
+        const encuestaModal = document.getElementById('encuestaCsatModal');
+        const closeEncuestaBtn = document.getElementById('closeEncuestaModalBtn');
+        const csatTicketNumero = document.getElementById('csatTicketNumero');
+        const csatEncuestaId = document.getElementById('csatEncuestaId');
+
         // 1. Dropdown Perfil Inferior
         if (userBtn && userDropdown) {
             userBtn.addEventListener('click', (e) => {
@@ -554,7 +682,21 @@
             });
         }
 
-        // 2. Controladores de Modales
+        // 2. Dropdown Notificaciones
+        if (notiBtn && notiDropdown) {
+            notiBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                notiDropdown.classList.toggle('hidden');
+                if (userDropdown) userDropdown.classList.add('hidden'); // Cierra el otro si está abierto
+            });
+            document.addEventListener('click', (e) => {
+                if (!notiDropdown.contains(e.target) && !notiBtn.contains(e.target)) {
+                    notiDropdown.classList.add('hidden');
+                }
+            });
+        }
+
+        // 3. Controladores de Modales
         function abrirMiCuenta() {
             if (miCuentaModal) miCuentaModal.classList.remove('hidden');
             if (userDropdown) userDropdown.classList.add('hidden');
@@ -572,6 +714,24 @@
 
         function cerrarPassword() {
             if (passModal) passModal.classList.add('hidden');
+        }
+
+        function abrirModalEncuesta(idEncuesta, numeroTicket) {
+            if (notiDropdown) notiDropdown.classList.add('hidden');
+            csatEncuestaId.value = idEncuesta;
+            csatTicketNumero.textContent = numeroTicket;
+            encuestaModal.classList.remove('hidden');
+        }
+
+
+        // Eventos Modal Encuesta CSAT
+        if (closeEncuestaBtn) {
+            closeEncuestaBtn.addEventListener('click', () => encuestaModal.classList.add('hidden'));
+        }
+        if (encuestaModal) {
+            encuestaModal.addEventListener('click', (e) => {
+                if (e.target === encuestaModal) encuestaModal.classList.add('hidden');
+            });
         }
 
         // Eventos Mi Cuenta
