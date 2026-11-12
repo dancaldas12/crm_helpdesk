@@ -1,27 +1,45 @@
 package com.serviclient.crm.service;
 
+import com.serviclient.crm.repository.EncuestaCsatRepository;
+import com.serviclient.crm.repository.RespuestaCsatRepository;
 import com.serviclient.crm.repository.TicketAdjuntoRepository;
 import com.serviclient.crm.dto.PortalTicketDto;
 import com.serviclient.crm.dto.TicketDto;
 import com.serviclient.crm.entity.CuentaPortal;
+import com.serviclient.crm.entity.EncuestaCsat;
+import com.serviclient.crm.entity.RespuestaCsat;
 import com.serviclient.crm.entity.Ticket;
 import com.serviclient.crm.entity.TicketAdjunto;
 import com.serviclient.crm.entity.enums.CanalOrigen;
+import com.serviclient.crm.entity.enums.EstadoEncuestaCsat;
+
 import java.io.IOException;
 import java.nio.file.*;
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Implementación del servicio de gestión de tickets e incidencias reportadas desde el portal de autoservicio del cliente.
+ * Implementación del servicio de gestión de tickets e incidencias reportadas
+ * desde el portal de autoservicio del cliente.
  * <p>
- * Se encarga de transformar las peticiones del portal en tickets formales del CRM asignados
- * con origen {@link CanalOrigen#PORTAL_WEB}, gestionando además el almacenamiento físico
- * y validación de archivos adjuntos (límite de 10 MB y formatos permitidos png, jpg, jpeg, pdf, txt).
+ * Se encarga de transformar las peticiones del portal en tickets formales del
+ * CRM asignados
+ * con origen {@link CanalOrigen#PORTAL_WEB}, gestionando además el
+ * almacenamiento físico
+ * y validación de archivos adjuntos (límite de 10 MB y formatos permitidos png,
+ * jpg, jpeg, pdf, txt).
  * </p>
  *
  * @author ServiClient Dev Team
@@ -34,22 +52,31 @@ public class PortalTicketService implements IPortalTicketService {
 
   private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
-  private static final Set<String> EXTENSIONES_PERMITIDAS =
-      Set.of("png", "jpg", "jpeg", "pdf", "txt");
+  private static final Set<String> EXTENSIONES_PERMITIDAS = Set.of("png", "jpg", "jpeg", "pdf", "txt");
 
   private final TicketService ticketService;
   private final TicketAdjuntoRepository ticketAdjuntoRepository;
+  private final EncuestaCsatRepository encuestaCsatRepository;
+  private final RespuestaCsatRepository respuestaCsatRepository;
+  private final HealthScoreService healthScoreService;
 
   /**
-   * Registra una nueva incidencia emitida por un contacto cliente autenticado a través del portal de clientes.
+   * Registra una nueva incidencia emitida por un contacto cliente autenticado a
+   * través del portal de clientes.
    *
    * @param cuentaPortal credencial de la cuenta del portal en sesión
-   * @param dto formulario con el asunto, categoría, prioridad y descripción del problema
-   * @param archivos arreglo opcional de archivos adjuntos cargados por el usuario
-   * @return entidad {@link Ticket} creada y asociada a la empresa y cliente correspondientes
-   * @throws IOException si ocurre un error de E/S al guardar los archivos adjuntos en disco
-   * @throws IllegalArgumentException si la cuenta está inactiva o los archivos superan límites de tamaño o formato
-   * @throws IllegalStateException si la cuenta del portal carece de relación con un contacto o cliente
+   * @param dto          formulario con el asunto, categoría, prioridad y
+   *                     descripción del problema
+   * @param archivos     arreglo opcional de archivos adjuntos cargados por el
+   *                     usuario
+   * @return entidad {@link Ticket} creada y asociada a la empresa y cliente
+   *         correspondientes
+   * @throws IOException              si ocurre un error de E/S al guardar los
+   *                                  archivos adjuntos en disco
+   * @throws IllegalArgumentException si la cuenta está inactiva o los archivos
+   *                                  superan límites de tamaño o formato
+   * @throws IllegalStateException    si la cuenta del portal carece de relación
+   *                                  con un contacto o cliente
    */
   @Transactional
   public Ticket crearTicketDesdePortal(
@@ -69,17 +96,16 @@ public class PortalTicketService implements IPortalTicketService {
     var cliente = contacto.getCliente();
     var empresa = cliente.getEmpresa();
 
-    TicketDto ticketDto =
-        TicketDto.builder()
-            .clienteId(cliente.getId())
-            .contactoId(contacto.getId())
-            .agenteId(null)
-            .asunto(dto.getAsunto())
-            .descripcion(dto.getDescripcion())
-            .categoria(dto.getCategoria())
-            .prioridad(dto.getPrioridad())
-            .canalOrigen(CanalOrigen.PORTAL_WEB)
-            .build();
+    TicketDto ticketDto = TicketDto.builder()
+        .clienteId(cliente.getId())
+        .contactoId(contacto.getId())
+        .agenteId(null)
+        .asunto(dto.getAsunto())
+        .descripcion(dto.getDescripcion())
+        .categoria(dto.getCategoria())
+        .prioridad(dto.getPrioridad())
+        .canalOrigen(CanalOrigen.PORTAL_WEB)
+        .build();
 
     /*
      * autor = null porque el ticket fue creado por el cliente
@@ -92,13 +118,48 @@ public class PortalTicketService implements IPortalTicketService {
     return ticket;
   }
 
+  @Override
+  @Transactional
+  public void responderEncuestaCsat(Long encuestaId, Integer puntuacion, String comentario, CuentaPortal cuenta) {
+    EncuestaCsat encuesta = encuestaCsatRepository.findById(encuestaId)
+        .orElseThrow(() -> new IllegalArgumentException("Encuesta no encontrada"));
+
+    // Validar que la encuesta pertenece al contacto autenticado
+    if (!encuesta.getContacto().getId().equals(cuenta.getContacto().getId())) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes permiso para responder esta encuesta.");
+    }
+
+    // Validar que la encuesta esté pendiente y sea la activa (la última)
+    if (encuesta.getEstado() != EstadoEncuestaCsat.PENDIENTE || !encuesta.isActiva()) {
+      throw new IllegalArgumentException("Esta encuesta ya fue respondida o ha caducado.");
+    }
+
+    // 1. Guardar la respuesta
+    RespuestaCsat respuesta = RespuestaCsat.builder()
+        .encuesta(encuesta)
+        .puntuacion(puntuacion)
+        .comentario(comentario)
+        .build();
+    respuestaCsatRepository.save(respuesta);
+
+    // 2. Marcar la encuesta como respondida
+    encuesta.setEstado(EstadoEncuestaCsat.RESPONDIDA);
+    encuesta.setFechaRespuesta(LocalDateTime.now());
+    encuestaCsatRepository.save(encuesta);
+
+    // 3. Impactar el Health Score del cliente B2B
+    healthScoreService.recalcularYActualizarHealthScore(encuesta.getCliente());
+  }
+
   /**
-   * Almacena físicamente los archivos adjuntos en el sistema de archivos del servidor
+   * Almacena físicamente los archivos adjuntos en el sistema de archivos del
+   * servidor
    * y registra las entidades {@link TicketAdjunto} en la base de datos.
    *
-   * @param ticket ticket al que se asocian los adjuntos
+   * @param ticket   ticket al que se asocian los adjuntos
    * @param archivos lista de ficheros subidos en la petición HTTP
-   * @throws IOException si falla la creación del directorio o la copia del flujo binario
+   * @throws IOException si falla la creación del directorio o la copia del flujo
+   *                     binario
    */
   private void guardarAdjuntos(Ticket ticket, MultipartFile[] archivos) throws IOException {
 
@@ -118,10 +179,9 @@ public class PortalTicketService implements IPortalTicketService {
 
       validarArchivo(archivo);
 
-      String nombreOriginal =
-          archivo.getOriginalFilename() != null
-               ? Paths.get(archivo.getOriginalFilename()).getFileName().toString()
-              : "archivo";
+      String nombreOriginal = archivo.getOriginalFilename() != null
+          ? Paths.get(archivo.getOriginalFilename()).getFileName().toString()
+          : "archivo";
 
       String extension = obtenerExtension(nombreOriginal);
 
@@ -131,25 +191,26 @@ public class PortalTicketService implements IPortalTicketService {
 
       Files.copy(archivo.getInputStream(), destino, StandardCopyOption.REPLACE_EXISTING);
 
-      TicketAdjunto adjunto =
-          TicketAdjunto.builder()
-              .ticket(ticket)
-              .mensaje(null)
-              .nombreArchivo(nombreOriginal)
-              .urlArchivo(destino.toString().replace("\\", "/"))
-              .tipoArchivo(archivo.getContentType())
-              .tamano(archivo.getSize())
-              .build();
+      TicketAdjunto adjunto = TicketAdjunto.builder()
+          .ticket(ticket)
+          .mensaje(null)
+          .nombreArchivo(nombreOriginal)
+          .urlArchivo(destino.toString().replace("\\", "/"))
+          .tipoArchivo(archivo.getContentType())
+          .tamano(archivo.getSize())
+          .build();
 
       ticketAdjuntoRepository.save(adjunto);
     }
   }
 
   /**
-   * Valida que el archivo individual no exceda el límite máximo de tamaño ni utilice extensiones no permitidas.
+   * Valida que el archivo individual no exceda el límite máximo de tamaño ni
+   * utilice extensiones no permitidas.
    *
    * @param archivo archivo multiparte a validar
-   * @throws IllegalArgumentException si excede 10 MB, no tiene nombre o la extensión no es soportada
+   * @throws IllegalArgumentException si excede 10 MB, no tiene nombre o la
+   *                                  extensión no es soportada
    */
   private void validarArchivo(MultipartFile archivo) {
 

@@ -25,4 +25,6 @@ public interface IPortalTicketService {
      * @throws IOException si ocurre un fallo al procesar los archivos binarios adjuntos
      */
     Ticket crearTicketDesdePortal(CuentaPortal cuentaPortal, PortalTicketDto dto, MultipartFile[] archivos) throws IOException;
+
+    void responderEncuestaCsat(Long encuestaId, Integer puntuacion, String comentario, CuentaPortal cuenta);
 }

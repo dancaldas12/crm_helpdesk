@@ -3,10 +3,13 @@ package com.serviclient.crm.controller.portalusuario;
 import com.serviclient.crm.entity.Contacto;
 import com.serviclient.crm.entity.CuentaPortal;
 import com.serviclient.crm.entity.Ticket;
+import com.serviclient.crm.entity.EncuestaCsat;
 import com.serviclient.crm.entity.enums.EstadoTicket;
 import com.serviclient.crm.entity.enums.PrioridadTicket;
 import com.serviclient.crm.repository.CuentaPortalRepository;
 import com.serviclient.crm.repository.TicketRepository;
+import com.serviclient.crm.repository.EncuestaCsatRepository;
+import com.serviclient.crm.service.IPortalTicketService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
@@ -17,9 +20,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequestMapping("/portal/mis-tickets")
@@ -29,6 +34,10 @@ public class MisTicketsController {
 
     private final CuentaPortalRepository cuentaPortalRepository;
     private final TicketRepository ticketRepository;
+    
+    // 1. INYECTAMOS EL REPOSITORIO DE ENCUESTAS Y EL SERVICIO DEL PORTAL
+    private final EncuestaCsatRepository encuestaCsatRepository;
+    private final IPortalTicketService portalTicketService;
 
     @Operation(summary = "Bandeja Mis Tickets del Portal de Clientes")
     @GetMapping
@@ -44,6 +53,10 @@ public class MisTicketsController {
 
         Long clienteId = cuenta.getContacto().getCliente().getId();
 
+        // 2. BUSCAMOS LAS ENCUESTAS PENDIENTES DEL CONTACTO Y LAS PASAMOS AL MODELO (Para la Campana)
+        List<EncuestaCsat> pendientes = encuestaCsatRepository.findPendientesActivasPorContacto(cuenta.getContacto().getId());
+        model.addAttribute("encuestasPendientes", pendientes);
+
         // Obtener la totalidad de tickets registrados para la empresa cliente
         List<Ticket> todosLosTickets = ticketRepository.findByClienteId(clienteId);
 
@@ -51,7 +64,7 @@ public class MisTicketsController {
         long abiertos = todosLosTickets.stream().filter(t -> t.getEstado() == EstadoTicket.ABIERTO).count();
         long enProceso = todosLosTickets.stream().filter(t -> t.getEstado() == EstadoTicket.EN_PROCESO).count();
         long criticos = todosLosTickets.stream().filter(t -> t.getPrioridad() == PrioridadTicket.CRITICA).count();
-        long pendientes = todosLosTickets.stream().filter(t -> t.getEstado() == EstadoTicket.PENDIENTE).count();
+        long pendientesKpi = todosLosTickets.stream().filter(t -> t.getEstado() == EstadoTicket.PENDIENTE).count();
         long fueraDeSla = todosLosTickets.stream().filter(Ticket::isFueraDeSla).count();
 
         // Filtrado por buscador, estado y prioridad
@@ -67,7 +80,7 @@ public class MisTicketsController {
         model.addAttribute("kpiAbiertos", abiertos);
         model.addAttribute("kpiEnProceso", enProceso);
         model.addAttribute("kpiCriticos", criticos);
-        model.addAttribute("kpiPendientes", pendientes);
+        model.addAttribute("kpiPendientes", pendientesKpi);
         model.addAttribute("kpiFueraDeSla", fueraDeSla);
 
         model.addAttribute("busqueda", busqueda);
@@ -77,6 +90,26 @@ public class MisTicketsController {
         model.addAttribute("prioridades", PrioridadTicket.values());
 
         return "portal/mis-tickets";
+    }
+
+    // 3. ESTE ES EL POST QUE RECIBIRÁ LAS ESTRELLITAS DEL MODAL
+    @PostMapping("/encuestas/responder")
+    public String procesarRespuestaEncuesta(
+            @RequestParam("encuestaId") Long encuestaId,
+            @RequestParam("puntaje") Integer puntaje,
+            @RequestParam(value = "comentario", required = false) String comentario,
+            Principal principal,
+            RedirectAttributes flash) {
+        try {
+            CuentaPortal cuenta = obtenerCuentaAutenticada(principal); 
+            
+            portalTicketService.responderEncuestaCsat(encuestaId, puntaje, comentario, cuenta);
+            flash.addFlashAttribute("successMessage", "¡Gracias por tu opinión! Hemos registrado tu calificación.");
+        } catch (Exception e) {
+            flash.addFlashAttribute("errorMessage", "Error al procesar la encuesta: " + e.getMessage());
+        }
+        
+        return "redirect:/portal/mis-tickets";
     }
 
     private CuentaPortal obtenerCuentaAutenticada(Principal principal) {
