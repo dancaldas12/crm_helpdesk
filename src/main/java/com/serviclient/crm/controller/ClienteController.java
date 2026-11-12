@@ -40,7 +40,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
+import com.serviclient.crm.repository.TicketHistorialRepository;
+import com.serviclient.crm.repository.EncuestaCsatRepository;
 /**
  * Controlador MVC para la gestión de clientes B2B.
  *
@@ -78,6 +79,8 @@ public class ClienteController {
   private final IClienteService clienteService;
   private final IHealthScoreService healthScoreService;
   private final IUsuarioService usuarioService;
+  private final TicketHistorialRepository ticketHistorialRepository;
+  private final EncuestaCsatRepository encuestaCsatRepository;
 
   // ─────────────────────────────────────────────────────────────────────────
   //  LISTADO
@@ -408,7 +411,22 @@ public class ClienteController {
     KpisCliente360 kpis = clienteService.obtenerKpisCliente360(cliente);
     List<FactorSalud> factores =
         healthScoreService.obtenerFactoresRiesgo(cliente);
-    List<EncuestaSatisfaccion> encuestas = clienteService.obtenerEncuestasPorCliente(id);
+    
+    List<com.serviclient.crm.entity.EncuestaCsat> encuestas = encuestaCsatRepository.findByClienteId(id);
+    
+    List<com.serviclient.crm.entity.TicketHistorial> actividadesRecientes = new java.util.ArrayList<>();
+    if (cliente.getTickets() != null && !cliente.getTickets().isEmpty()) {
+        for (com.serviclient.crm.entity.Ticket t : cliente.getTickets()) {
+            actividadesRecientes.addAll(ticketHistorialRepository.findByTicketIdOrderByCreatedAtDesc(t.getId()));
+        }
+
+        actividadesRecientes.sort((h1, h2) -> h2.getCreatedAt().compareTo(h1.getCreatedAt()));
+
+        if (actividadesRecientes.size() > 15) {
+            actividadesRecientes = actividadesRecientes.subList(0, 15);
+        }
+    }
+
     List<Renovacion> renovaciones = clienteService.obtenerRenovacionesPorCliente(id);
     List<Contacto> contactosActivos = clienteService.obtenerContactosActivos(id);
     List<Contacto> contactosInactivos = clienteService.obtenerContactosInactivos(id);
@@ -417,6 +435,7 @@ public class ClienteController {
     model.addAttribute("kpis", kpis);
     model.addAttribute("factores", factores);
     model.addAttribute("encuestas", encuestas);
+    model.addAttribute("actividades", actividadesRecientes);
     model.addAttribute("renovaciones", renovaciones);
     model.addAttribute("activeTab", tab);
     model.addAttribute("activeMenu", "clientes");
