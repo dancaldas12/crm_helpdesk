@@ -353,9 +353,9 @@
                                 </form>
 
                                 <button th:if="${con.esPrincipal}" type="button" class="btn btn-secondary"
-                                    data-modal-target="modalRestablecerPortal"
-                                    style="padding: 5px 10px; font-size: 11px">
-                                    Restablecer acceso
+                                    th:attr="data-modal-target=${'modalRestablecerPortal-' + con.id}"
+                                    style="padding: 5px 10px; font-size: 11px; background: #fffbeb; color: #b45309; border-color: #fde68a">
+                                    Restablecer contraseña
                                 </button>
 
                                 <form th:action="@{/clientes/{clienteId}/contactos/{contactoId}/desactivar(
@@ -656,110 +656,53 @@
                 </form>
             </div>
         </div>
-        <!-- MODAL RESTABLECER ACCESO PORTAL -->
-        <div id="modalRestablecerPortal" class="modal-overlay" th:each="con : ${contactosActivos}"
-            th:if="${con.esPrincipal}">
-            <div class="modal-card" style="max-width: 480px">
-                <!-- Cabecera -->
-                <div class="modal-header">
-                    <div style="display: flex; align-items: center; gap: 12px">
-                        <div style="
-                                    width: 40px;
-                                    height: 40px;
-                                    border-radius: 10px;
-                                    background: #eef2ff;
-                                    color: #4f46e5;
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    flex-shrink: 0;
-                                ">
-                            <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                            </svg>
-                        </div>
 
+        <!-- MODALES RESTABLECER CONTRASEÑA (PORTAL CLIENTE) -->
+        <th:block th:each="con : ${contactosActivos}">
+            <div th:if="${con.esPrincipal}" th:id="${'modalRestablecerPortal-' + con.id}" class="modal-overlay"
+                role="dialog" aria-modal="true" aria-label="Confirmar restablecimiento de contraseña">
+                <div class="modal-card" style="max-width:480px">
+                    <div class="modal-header">
                         <div>
-                            <div class="modal-title">Restablecer acceso</div>
+                            <div class="modal-title">Restablecer contraseña</div>
+                            <div style="font-size:12px;color:var(--color-text-muted);margin-top:4px">
+                                Acceso al Portal Cliente
+                            </div>
+                        </div>
+                        <button type="button" class="modal-close-btn" data-modal-close aria-label="Cerrar">×</button>
+                    </div>
 
-                            <div style="font-size: 12.5px; color: var(--color-text-muted); margin-top: 2px">Portal
-                                Cliente</div>
+                    <div class="modal-body">
+                        <p style="font-size:14px;line-height:1.6;margin:0 0 16px">
+                            Se generará una contraseña temporal nueva para
+                            <strong th:text="${con.nombreCompleto}">Nombre Contacto</strong>.
+                        </p>
+                        <div style="background:#f8fafc;border:1px solid var(--color-border);
+                            padding:14px;border-radius:9px;margin-bottom:16px">
+                            <div style="font-size:11px;font-weight:700;color:var(--color-text-muted);
+                                text-transform:uppercase;margin-bottom:6px">Cuenta del portal</div>
+                            <strong th:text="${con.email}" style="font-size:14px">correo@empresa.com</strong>
+                        </div>
+                        <div style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;
+                            border-radius:9px;padding:12px 14px;font-size:13px;line-height:1.5">
+                            <strong>Importante:</strong> la contraseña anterior dejará de servir
+                            para iniciar sesión. El contacto tendrá que utilizar la nueva
+                            contraseña temporal y cambiarla antes de continuar.
                         </div>
                     </div>
 
-                    <button class="modal-close-btn" data-modal-close>&times;</button>
-                </div>
-
-                <!-- Contenido -->
-                <div class="modal-body">
-                    <p style="margin: 0 0 18px; font-size: 14px; line-height: 1.6; color: var(--color-text-main)">
-                        Se generará una nueva contraseña temporal para
-
-                        <strong th:text="${con.nombreCompleto}">Roberto Gómez</strong>
-                        .
-                    </p>
-
-                    <!-- Contacto -->
-                    <div style="
-                                background: #f8fafc;
-                                border: 1px solid var(--color-border);
-                                border-radius: 10px;
-                                padding: 14px 16px;
-                                margin-bottom: 16px;
-                            ">
-                        <div style="
-                                    font-size: 11px;
-                                    font-weight: 700;
-                                    color: var(--color-text-muted);
-                                    text-transform: uppercase;
-                                    margin-bottom: 5px;
-                                ">
-                            Usuario del portal
-                        </div>
-
-                        <div style="font-size: 14px; font-weight: 700; color: var(--color-text-main)"
-                            th:text="${con.email}">
-                            roberto.gomez@techcorp.pe
-                        </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-modal-close>Cancelar</button>
+                        <form
+                            th:action="@{/clientes/{clienteId}/contactos/{contactoId}/portal/restablecer(clienteId=${cliente.id}, contactoId=${con.id})}"
+                            method="post" style="margin:0">
+                            <button type="submit" class="btn btn-primary">Generar contraseña</button>
+                        </form>
                     </div>
-
-                    <!-- Advertencia -->
-                    <div style="
-                                display: flex;
-                                gap: 10px;
-                                background: #fff7ed;
-                                border: 1px solid #fed7aa;
-                                color: #9a3412;
-                                padding: 12px 14px;
-                                border-radius: 9px;
-                                font-size: 13px;
-                                line-height: 1.5;
-                            ">
-                        <div style="font-size: 18px">⚠</div>
-
-                        <div>
-                            <strong>Importante:</strong>
-                            la contraseña anterior dejará de funcionar inmediatamente. El contacto deberá utilizar la
-                            nueva contraseña
-                            temporal.
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Pie -->
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-modal-close>Cancelar</button>
-
-                    <form th:action="@{/clientes/{clienteId}/contactos/{contactoId}/portal/restablecer(
-                        clienteId=${cliente.id},
-                        contactoId=${con.id})}" method="post">
-                        <button type="submit" class="btn btn-primary">Generar nueva contraseña</button>
-                    </form>
                 </div>
             </div>
-        </div>
+        </th:block>
+
         <!-- MODALES EDITAR CONTACTO -->
         <div th:each="con : ${contactosActivos}">
             <div th:id="'modalEditarContacto-' + ${con.id}" class="modal-overlay">
@@ -838,6 +781,71 @@
                 </div>
             </div>
         </div>
+
+        <!-- MODAL DE CONTRASEÑA TEMPORAL -->
+        <div id="modalCredencialesPortal" class="modal-overlay" th:if="${portalPasswordTemporal != null}" role="dialog"
+            aria-modal="true" aria-label="Credenciales temporales del cliente">
+            <div class="modal-card" style="max-width: 480px; padding: 0;">
+
+                <div style="padding: 24px 32px; border-bottom: 1px solid var(--color-border-light);">
+                    <div style="font-size: 18px; font-weight: 800; color: var(--color-text-main);">
+                        Credenciales generadas
+                    </div>
+                </div>
+
+                <div style="padding: 32px;">
+                    <p style="font-size: 14.5px; line-height: 1.6; color: var(--color-text-sub); margin: 0 0 24px;">
+                        Guarda estas credenciales y entrégalas al cliente de forma segura. Esta contraseña se muestra
+                        una sola vez.
+                    </p>
+
+                    <div style="margin-bottom: 24px;">
+                        <label
+                            style="display: block; font-size: 12px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; margin-bottom: 8px;">
+                            CORREO ELECTRÓNICO
+                        </label>
+                        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; font-size: 15px; color: var(--color-text-main);"
+                            th:text="${portalEmail}">cliente@empresa.com</div>
+                    </div>
+
+                    <div style="margin-bottom: 24px;">
+                        <label
+                            style="display: block; font-size: 12px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; margin-bottom: 8px;">
+                            CONTRASEÑA TEMPORAL
+                        </label>
+                        <div style="background: #eff6ff; border: 1px solid #e0e7ff; border-radius: 8px; padding: 14px 16px; font-family: monospace; font-size: 18px; font-weight: 700; letter-spacing: 1px; color: #4338ca;"
+                            th:text="${portalPasswordTemporal}">Ejemplo123</div>
+                    </div>
+
+                    <div
+                        style="background: #fff7ed; border: 1px solid #fed7aa; color: #b45309; padding: 16px; border-radius: 8px; font-size: 13.5px; line-height: 1.5;">
+                        Al cerrar este aviso, no podrás volver a consultar esta contraseña. Si el cliente la pierde,
+                        utiliza «Restablecer contraseña».
+                    </div>
+                </div>
+
+                <div
+                    style="padding: 24px 32px; border-top: 1px solid var(--color-border-light); display: flex; justify-content: flex-end; background-color: #ffffff; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+                    <a class="btn btn-primary" th:href="@{/clientes/{id}(id=${cliente.id}, tab='contactos')}"
+                        style="padding: 10px 24px; font-weight: 600;">
+                        Ya guardé las credenciales
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', function () {
+                var mostrarModal = /*[[${portalPasswordTemporal != null}]]*/ false;
+                if (mostrarModal) {
+                    var modal = document.getElementById('modalCredencialesPortal');
+                    if (modal) {
+                        modal.classList.add('active');
+                    }
+                }
+            });
+        </script>
+
     </section>
 </body>
 
