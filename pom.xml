@@ -21,6 +21,7 @@
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <lombok.version>1.18.30</lombok.version>
+        <dependency-check.version>11.1.1</dependency-check.version>
     </properties>
 
     <dependencies>
@@ -154,6 +155,52 @@
                     </excludes>
                 </configuration>
             </plugin>
+            <!-- ============================================================ -->
+            <!-- OWASP Dependency-Check                                       -->
+            <!-- Con API key:   mvnw verify -Dnvd.api.key=TU_CLAVE           -->
+            <!-- Sin API key:   mvnw verify (usa datafeed local, más lento)  -->
+            <!-- Reporte:       target/dependency-check-report.html           -->
+            <!-- ============================================================ -->
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>${dependency-check.version}</version>
+                <configuration>
+                    <!-- API key de NVD: pasar como -Dnvd.api.key=... o desde .env -->
+                    <!-- Si está vacía, el plugin usa el datafeed público (más lento) -->
+                    <nvdApiKey>${nvd.api.key}</nvdApiKey>
+                    <!-- Formato de reporte: HTML para lectura humana + JSON para CI -->
+                    <formats>
+                        <format>HTML</format>
+                        <format>JSON</format>
+                    </formats>
+                    <!-- Directorio de salida de reportes -->
+                    <outputDirectory>${project.build.directory}</outputDirectory>
+                    <!-- Fallar el build si alguna dependencia tiene CVSS >= 7.0 -->
+                    <failBuildOnCVSS>7</failBuildOnCVSS>
+                    <!-- No fallar si la NVD no responde o hay error de red -->
+                    <failOnError>false</failOnError>
+                    <!-- Cache de la NVD: directorio local para reutilizar entre ejecuciones -->
+                    <dataDirectory>${user.home}/.owasp/dependency-check-data</dataDirectory>
+                    <!-- Número de reintentos al llamar la NVD API -->
+                    <nvdMaxRetryCount>3</nvdMaxRetryCount>
+                    <!-- Espera entre peticiones NVD (ms): 6000 sin key, 1500 con key -->
+                    <nvdApiDelay>6000</nvdApiDelay>
+                    <!-- Suprimir falsos positivos conocidos si existe el archivo -->
+                    <suppressionFiles>
+                        <suppressionFile>${project.basedir}/dependency-check-suppressions.xml</suppressionFile>
+                    </suppressionFiles>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <phase>verify</phase>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

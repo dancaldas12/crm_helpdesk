@@ -9,7 +9,12 @@ dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
-# Environment variables
+
+# OWASP Dependency-Check — reportes generados (en target/, ya cubierto por target/)
+# El archivo de supresiones SÍ se versiona si existe
+dependency-check-suppressions.xml.bak
+
+# Environment variables (contienen credenciales — NUNCA versionar)
 .env
 .env.local
 .env.*.local
