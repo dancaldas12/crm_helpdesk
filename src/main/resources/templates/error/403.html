@@ -1,89 +1,140 @@
 <!doctype html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Acceso denegado - ServiClient</title>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
-        <style>
-            * {
-                box-sizing: border-box;
-            }
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>403 - Acceso denegado | ServiClient</title>
 
-            body {
-                margin: 0;
-                min-height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: #f8fafc;
-                font-family: Arial, sans-serif;
-                color: #0f172a;
-            }
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-            .error-card {
-                width: 100%;
-                max-width: 520px;
-                background: #ffffff;
-                padding: 48px;
-                border-radius: 18px;
-                border: 1px solid #e2e8f0;
-                text-align: center;
-                box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-            }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: #0f172a;
+            padding: 24px;
+        }
 
-            .logo {
-                width: 80px;
-                height: 80px;
-                object-fit: contain;
-                margin-bottom: 18px;
-            }
+        .error-card {
+            width: 100%;
+            max-width: 520px;
+            background: #ffffff;
+            padding: 48px;
+            border-radius: 18px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+        }
 
-            .code {
-                font-size: 72px;
-                font-weight: 800;
-                color: #6366f1;
-                margin: 0;
-            }
+        .logo {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            margin-bottom: 18px;
+        }
 
-            h1 {
-                margin: 8px 0 12px;
-                font-size: 26px;
-            }
+        .logo-fallback {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 20px;
+            border-radius: 14px;
+            background: #6366f1;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 800;
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
+        }
 
-            p {
-                color: #64748b;
-                line-height: 1.6;
-                margin-bottom: 28px;
-            }
+        .code {
+            font-size: 72px;
+            line-height: 1;
+            font-weight: 900;
+            color: #6366f1;
+            margin: 0 0 16px 0;
+            letter-spacing: -2px;
+        }
 
-            a {
-                display: inline-block;
-                padding: 12px 22px;
-                background: #6366f1;
-                color: #ffffff;
-                text-decoration: none;
-                border-radius: 9px;
-                font-weight: 700;
-            }
+        h1 {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            color: #1e293b;
+        }
 
-            a:hover {
-                background: #4f46e5;
-            }
-        </style>
-    </head>
+        p {
+            color: #64748b;
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
 
-    <body>
-        <div class="error-card">
-            <img th:src="@{/img/logo-icono.png}" class="logo" alt="ServiClient" />
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
 
-            <div class="code">403</div>
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 24px;
+            background: #6366f1;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            border: 1px solid #6366f1;
+        }
 
-            <h1>Acceso denegado</h1>
+        .btn:hover {
+            background: #4f46e5;
+            border-color: #4f46e5;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
 
-            <p>No tienes permisos para acceder a este módulo con el rol asignado a tu cuenta.</p>
+<body>
+    <div class="error-card">
+        <img th:src="@{/img/logo-icono.png}" class="logo" alt="ServiClient" onerror="this.outerHTML='<div class=\'logo-fallback\'>S</div>'" />
 
-            <a th:href="@{/dashboard}">Volver al Dashboard</a>
+        <div class="code">403</div>
+
+        <h1>Acceso denegado</h1>
+
+        <p>No tienes permisos para acceder a este módulo o realizar esta acción con el rol asignado a tu cuenta.</p>
+
+        <div class="actions">
+
+            <th:block sec:authorize="hasAnyRole('ADMIN', 'AGENTE', 'SUPERVISOR')">
+                <a th:href="@{/dashboard}" class="btn">Volver al Dashboard</a>
+            </th:block>
+
+            <th:block sec:authorize="hasAnyRole('CLIENTE', 'CONTACTO', 'PORTAL')">
+                <a th:href="@{/portal/mis-tickets}" class="btn">Volver a Mis Tickets</a>
+            </th:block>
+
+            <th:block sec:authorize="!isAuthenticated()">
+                <a th:href="@{/login}" class="btn">Ir al Inicio de Sesión</a>
+            </th:block>
         </div>
-    </body>
+    </div>
+</body>
+
 </html>
