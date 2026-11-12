@@ -1,0 +1,77 @@
+services:
+  # ----------------------------------------------------------------------------
+  # Base de Datos Relacional: MySQL 8
+  # ----------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: crm-helpdesk-mysql
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=caching_sha2_password
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root1234}
+      MYSQL_DATABASE: ${DB_NAME:-serviclient}
+      MYSQL_USER: ${DB_USER:-serviclient_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-serviclient_pass}
+      TZ: ${TZ:-America/Lima}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - crm-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ----------------------------------------------------------------------------
+  # Aplicación Monolítica: ServiClient CRM Helpdesk (Spring Boot 3 + Java 21)
+  # ----------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crm-helpdesk-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-mysql}
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-serviclient}
+      DB_USER: ${DB_USER:-serviclient_user}
+      DB_PASSWORD: ${DB_PASSWORD:-serviclient_pass}
+      TZ: ${TZ:-America/Lima}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - crm-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+# ------------------------------------------------------------------------------
+# Red interna aislada para comunicación inter-contenedores
+# ------------------------------------------------------------------------------
+networks:
+  crm-network:
+    name: crm_helpdesk_network
+    driver: bridge
+
+# ------------------------------------------------------------------------------
+# Volumen persistente para datos de MySQL
+# ------------------------------------------------------------------------------
+volumes:
+  mysql_data:
+    name: crm_helpdesk_mysql_data
+

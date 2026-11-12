@@ -1,0 +1,41 @@
+# Version control
+.git/
+.gitignore
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Build outputs
+target/
+*.jar
+*.war
+
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# OS and temp files
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak
+
+# Logs
+logs/
+*.log
+
+# Documentation and external scripts
+docs/
+bin/
+sql/
+README.md
+
