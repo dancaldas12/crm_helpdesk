@@ -2,7 +2,7 @@ spring:
   application:
     name: crm-helpdesk
   profiles:
-    active: mysql
+    active: ${SPRING_PROFILES_ACTIVE:mysql}
   thymeleaf:
     cache: false
     mode: HTML

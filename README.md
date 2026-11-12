@@ -10,6 +10,7 @@
 [![License](https://img.shields.io/badge/License-MIT%20Academico-lightgrey.svg)](#-licencia)
 [![Guava](https://img.shields.io/badge/Google%20Guava-33%2B-yellow.svg)](https://github.com/google/guava)
 [![Apache POI](https://img.shields.io/badge/Apache%20POI-5%2B-red.svg)](https://poi.apache.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)](docker-compose.yml)
 
 ---
 
@@ -45,7 +46,8 @@
 | **Persistencia & ORM** | Spring Data JPA + Hibernate | 3.3.3 / 6.5 | Mapeo objeto-relacional y consultas optimizadas sobre 26 entidades y 26 repositorios |
 | **Seguridad Web** | Spring Security | 6.3.3 | Autenticación basada en sesiones, filtro de contraseñas temporales, roles y CSRF |
 | **Base de Datos** | MySQL Server | 8.0+ | Base de datos relacional principal con motor InnoDB y juego de caracteres UTF-8 |
-| **Base de Datos de Pruebas** | H2 Database | 2.2.x | Base de datos relacional en memoria para ejecución veloz de pruebas de integración |
+| **Base de Datos de Pruebas** | H2 Database | 2.2.x | Base de datos relacional en memoria para desarrollo local y pruebas de integración |
+| **Contenedores & Orquestación** | Docker & Docker Compose | Multi-Stage / Compose v2+ | Dockerfile multi-stage (builder/runtime), MySQL 8 aislado, volúmenes persistentes y sincronización por healthcheck |
 | **Documentación OpenAPI** | Springdoc OpenAPI UI | 2.6.0 | Generación automática de Swagger UI (`/swagger-ui.html`) y esquemas OpenAPI 3 |
 | **Gestión de Construcción** | Apache Maven | 3.9+ | Ciclo de vida de compilación, empaquetado y generación de Javadoc |
 | **Documentación de Código** | Maven Javadoc Plugin | 3.6.3 | Compilación del sitio Javadoc HTML con soporte nativo de Java 21 y UTF-8 |
@@ -232,37 +234,119 @@ El esquema completo esta en `CRM_MESA_AYUDA.sql` e incluye **25 tablas**.
 | 24 | interacciones | Interaccion | Reuniones, llamadas y seguimientos |
 | 25 | auditoria | Auditoria | Log de acciones del sistema |
 
-### Configuracion de conexion
+### Configuración de conexión y perfiles
 
-```yaml
-# application-mysql.yml (valores por defecto)
-spring:
-  datasource:
-    url: jdbc:mysql://localhost:3306/serviclient?createDatabaseIfNotExist=true
-    username: root
-    password:
-  jpa:
-    hibernate:
-      ddl-auto: update
-```
+La aplicación soporta dos perfiles principales de base de datos:
 
-Variables de entorno: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
+1. **Perfil `mysql` (Contenedores y Producción / Por Defecto):**
+   Conexión a MySQL 8 mediante `src/main/resources/application-mysql.yml`. Los valores son configurables a través de variables de entorno y cuentan con valores predeterminados listos para usar:
+
+   ```yaml
+   spring:
+     datasource:
+       url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:serviclient}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Lima&characterEncoding=UTF-8}}
+       username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:serviclient_user}}
+       password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:serviclient_pass}}
+     jpa:
+       hibernate:
+         ddl-auto: update
+   ```
+
+   **Variables de entorno soportadas:** `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`, `APP_PORT`, `SPRING_PROFILES_ACTIVE`.
+
+2. **Perfil `dev` (Desarrollo Local en Memoria con H2):**
+   Configurado en `src/main/resources/application-dev.yml`. Levanta una base de datos H2 en memoria (`jdbc:h2:mem:crm_helpdesk_db`) con consola web activa en `/h2-console`, ideal para probar o desarrollar sin requerir un servidor MySQL en ejecución.
 
 ---
 
 ## Requisitos Previos
 
-| Herramienta | Version minima | Descarga |
+### Opción A: Ejecución con Docker (Recomendada / Zero-Setup)
+No requiere instalar Java, Maven ni MySQL en la máquina anfitriona:
+| Herramienta | Versión mínima | Descarga |
 |---|---|---|
-| Java JDK | 21 | https://learn.microsoft.com/es-es/java/openjdk/download |
-| Apache Maven | 3.9+ | https://maven.apache.org/download.cgi |
-| MySQL Server | 8.0+ | https://dev.mysql.com/downloads/mysql/ |
+| Docker Desktop o Docker Engine + Compose | 20.10+ / Compose v2+ | https://www.docker.com/products/docker-desktop/ |
+
+### Opción B: Ejecución Local Tradicional (Sin Docker)
+| Herramienta | Versión mínima | Descarga |
+|---|---|---|
+| Java JDK | 21 (LTS) | https://learn.microsoft.com/es-es/java/openjdk/download |
+| Apache Maven | 3.9+ (o usar `./mvnw` incluido) | https://maven.apache.org/download.cgi |
+| MySQL Server (opcional si usas H2) | 8.0+ | https://dev.mysql.com/downloads/mysql/ |
 
 ---
 
 ## Instalación y Ejecución
 
-### Opción 1 - Script Rápido Automatizado (Windows)
+### Opción 1 - Despliegue con Docker & Docker Compose (Recomendada)
+
+Permite clonar el repositorio y tener toda la arquitectura (Spring Boot 3 + Java 21 y MySQL 8) funcionando de inmediato sin instalar herramientas locales:
+
+```bash
+# 1. Clonar el repositorio y acceder a la carpeta
+git clone <url-del-repositorio>
+cd crm_helpdesk
+
+# 2. (Opcional) Copiar y personalizar variables de entorno
+cp .env.example .env
+
+# 3. Construir y levantar los contenedores en segundo plano
+docker compose up -d --build
+```
+
+**Características de la dockerización:**
+- **Build Multi-stage:** Compila la aplicación en un contenedor efímero (`maven:3.9.9-eclipse-temurin-21-alpine`) aprovechando el caché de capas de dependencias, y empaqueta el artefacto final en una imagen JRE mínima y segura (`eclipse-temurin:21-jre-alpine`).
+- **Seguridad:** La aplicación se ejecuta bajo un usuario no root (`appuser`).
+- **Sincronización por Healthcheck:** Spring Boot espera a que MySQL 8 pase exitosamente su `healthcheck` (`mysqladmin ping`) antes de arrancar (`condition: service_healthy`), evitando errores de conexión al inicio.
+- **Persistencia de Datos:** Los datos de MySQL se almacenan en el volumen administrado `crm_helpdesk_mysql_data`.
+- **Compatibilidad con Apache POI:** Incluye librerías de fuentes en Alpine (`fontconfig`, `freetype`, `ttf-dejavu`) para la exportación de reportes Excel.
+
+**Comandos útiles de Docker Compose:**
+```bash
+# Ver estado de los contenedores y healthchecks
+docker compose ps
+
+# Ver logs en tiempo real de la aplicación
+docker compose logs -f app
+
+# Ver logs de MySQL
+docker compose logs -f mysql
+
+# Detener los servicios conservando los datos
+docker compose down
+
+# Detener los servicios y eliminar los volúmenes (reinicio limpio de base de datos)
+docker compose down -v
+```
+
+La aplicación queda disponible en **http://localhost:8080**
+
+---
+
+### Opción 2 - Desarrollo Local con H2 (Base de Datos en Memoria)
+
+Si deseas desarrollar o probar cambios en tu máquina local sin levantar contenedores ni servidores MySQL externos, utiliza el perfil `dev`:
+
+Con **Maven Wrapper**:
+```bash
+# Linux / macOS
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+
+# Windows (PowerShell / CMD)
+.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+Con **Maven instalado**:
+```bash
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+- Aplicación: **http://localhost:8080**
+- Consola H2: **http://localhost:8080/h2-console** (JDBC URL: `jdbc:h2:mem:crm_helpdesk_db`, Usuario: `sa`, Contraseña: en blanco)
+
+---
+
+### Opción 3 - Script Rápido Automatizado (Windows con MySQL Local)
 
 El proyecto cuenta con scripts de arranque en la carpeta `bin/` que configuran el entorno Java 21 y Maven, levantan el perfil MySQL y abren automáticamente el navegador en `http://localhost:8080`:
 
@@ -287,20 +371,27 @@ Desde **PowerShell**:
    mvn spring-boot:run -Dspring-boot.run.profiles=mysql
    ```
 
-### Opción 2 - Ejecución Directa con Maven
+---
+
+### Opción 4 - Ejecución Directa con Maven (MySQL Local)
 
 ```powershell
 mvn spring-boot:run -Dspring-boot.run.profiles=mysql
 ```
 
-### Opción 3 - Compilación y Ejecución de JAR
+---
+
+### Opción 5 - Compilación y Ejecución del JAR Empaquetado
 
 ```bash
 # Compilar y empaquetar
 mvn clean package -DskipTests
 
-# Ejecutar el artefacto generado
+# Ejecutar el artefacto generado con perfil MySQL
 java -jar target/crm-helpdesk-1.0.0.jar --spring.profiles.active=mysql
+
+# O ejecutar con perfil H2 (dev)
+java -jar target/crm-helpdesk-1.0.0.jar --spring.profiles.active=dev
 ```
 
 La aplicación quedará disponible en **http://localhost:8080**
