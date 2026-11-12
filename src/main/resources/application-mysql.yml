@@ -18,4 +18,9 @@ spring:
     properties:
       hibernate:
         format_sql: false
+  servlet:
+    session:
+      cookie:
+        secure: true      # Solo enviar JSESSIONID por HTTPS (perfil producción)
+        same-site: lax    # Mitigar CSRF via atributo SameSite
 

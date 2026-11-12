@@ -20,6 +20,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import com.serviclient.crm.repository.CuentaPortalRepository;
 import java.util.Collections;
 
@@ -55,6 +56,29 @@ import java.util.Collections;
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
+
+    /**
+     * Política CSP en modo Report-Only.
+     * <p>
+     * Se usa {@code Content-Security-Policy-Report-Only} porque la aplicación
+     * utiliza estilos inline y scripts inline de forma extensiva en las plantillas
+     * Thymeleaf, lo que impide una política restrictiva sin rediseño. Esta política
+     * permite monitorear violaciones en DevTools sin romper la aplicación.
+     * <p>
+     * Para pasar a modo enforced, cambiar el nombre del header a
+     * {@code Content-Security-Policy} una vez validadas las violaciones en staging.
+     */
+    private static final String CSP_REPORT_ONLY_POLICY =
+            "default-src 'self'; " +
+            "script-src 'self' 'unsafe-inline' cdn.tailwindcss.com cdnjs.cloudflare.com cdn.jsdelivr.net; " +
+            "style-src 'self' 'unsafe-inline' cdnjs.cloudflare.com fonts.googleapis.com; " +
+            "font-src 'self' cdnjs.cloudflare.com fonts.gstatic.com data:; " +
+            "img-src 'self' data:; " +
+            "connect-src 'self'; " +
+            "form-action 'self'; " +
+            "frame-ancestors 'self'; " +
+            "object-src 'none'; " +
+            "base-uri 'self'";
 
     /**
      * Bean del codificador de contraseñas utilizando el algoritmo seguro BCrypt.
@@ -153,7 +177,16 @@ public class SecurityConfig {
                         .logoutSuccessUrl("/portalusuario/login?logout=true")
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
-                        .permitAll());
+                        .permitAll())
+                .headers(headers -> {
+                    headers.httpStrictTransportSecurity(hsts -> hsts
+                            .maxAgeInSeconds(31536000)
+                            .includeSubDomains(false)
+                    );
+                    headers.addHeaderWriter(new StaticHeadersWriter(
+                            "Content-Security-Policy-Report-Only", CSP_REPORT_ONLY_POLICY
+                    ));
+                });
 
         http.addFilterAfter(
                 new CambioPasswordPortalFilter(cuentaPortalRepository),
@@ -182,7 +215,16 @@ public class SecurityConfig {
                 new ProviderManager(
                         Collections.singletonList(adminAuthenticationProvider())));
         http.csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**"))
-                .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
+                .headers(headers -> {
+                    headers.frameOptions(frameOptions -> frameOptions.sameOrigin());
+                    headers.httpStrictTransportSecurity(hsts -> hsts
+                            .maxAgeInSeconds(31536000)
+                            .includeSubDomains(false)
+                    );
+                    headers.addHeaderWriter(new StaticHeadersWriter(
+                            "Content-Security-Policy-Report-Only", CSP_REPORT_ONLY_POLICY
+                    ));
+                })
                 .authorizeHttpRequests(
                         auth -> auth.requestMatchers(PathRequest.toStaticResources().atCommonLocations())
                                 .permitAll()
