@@ -520,6 +520,39 @@ mvn clean test
 
 ---
 
+## Análisis de calidad con SonarQube
+
+El proyecto incluye SonarScanner for Maven y JaCoCo para publicar en SonarQube el análisis estático y la cobertura generada al ejecutar las pruebas.
+
+### Levantar SonarQube local
+
+Docker Compose puede iniciar SonarQube Community Build y su base PostgreSQL sin alterar el arranque normal de la aplicación:
+
+```powershell
+docker compose --profile sonar up -d sonar-db sonarqube
+```
+
+Abre **http://localhost:9000**. En el primer inicio, entra con `admin` / `admin`, cambia la contraseña y crea un token desde **My Account → Security**. La primera puesta en marcha puede tardar unos minutos.
+
+### Analizar el proyecto
+
+En PowerShell, define el token para la sesión actual y lanza el análisis desde la raíz del repositorio:
+
+```powershell
+$env:SONAR_TOKEN = "tu_token_de_sonarqube"
+.\mvnw.cmd clean test jacoco:report org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.host.url=http://localhost:9000
+```
+
+El comando ejecuta las pruebas y genera `target/site/jacoco/jacoco.xml`, que SonarQube importa para mostrar cobertura. Usa `test` y `jacoco:report` para evitar ejecutar el análisis independiente de OWASP Dependency-Check que está enlazado a la fase `verify`. El proyecto aparecerá con la clave `crm_helpdesk`. No guardes el token en `.env`, en el código ni en archivos versionados.
+
+Para detener SonarQube sin borrar sus datos:
+
+```powershell
+docker compose --profile sonar stop sonarqube sonar-db
+```
+
+Los datos de análisis persisten en volúmenes Docker dedicados. No uses `docker compose down -v` si quieres conservarlos.
+
 ## Análisis de Vulnerabilidades (OWASP Dependency-Check)
 
 El proyecto integra [OWASP Dependency-Check](https://owasp.org/www-project-dependency-check/) como plugin Maven. Se ejecuta en la fase `verify` y **falla el build** si detecta alguna dependencia con CVSS ≥ 7.0. Los reportes se generan en `target/dependency-check-report.html` (HTML) y `target/dependency-check-report.json` (JSON).
