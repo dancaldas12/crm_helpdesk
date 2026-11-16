@@ -5,7 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.serviclient.crm.repository.ClienteRepository;
-import com.serviclient.crm.repository.EncuestaSatisfaccionRepository;
+import com.serviclient.crm.repository.EncuestaCsatRepository;
 import com.serviclient.crm.repository.HealthScoreHistorialRepository;
 import com.serviclient.crm.repository.TicketRepository;
 import com.serviclient.crm.entity.Cliente;
@@ -30,7 +30,7 @@ class HealthScoreServiceTest {
 
   @Mock private ClienteRepository clienteRepository;
 
-  @Mock private EncuestaSatisfaccionRepository encuestaSatisfaccionRepository;
+  @Mock private EncuestaCsatRepository encuestaCsatRepository;
 
   @Mock private HealthScoreHistorialRepository healthScoreHistorialRepository;
 
@@ -65,8 +65,8 @@ class HealthScoreServiceTest {
             eq(10L), eq(PrioridadTicket.CRITICA), eq(EstadoTicket.CERRADO)))
         .thenReturn(2L);
     // Mock: CSAT bajo de 2.5
-    when(encuestaSatisfaccionRepository.obtenerPromedioCsatPorCliente(10L))
-        .thenReturn(2.5);
+    when(encuestaCsatRepository.findAverageScoreByClienteId(10L))
+    .thenReturn(2.5);
 
     int score = healthScoreService.recalcularYActualizarHealthScore(cliente);
 
@@ -87,4 +87,20 @@ class HealthScoreServiceTest {
     assertFalse(factores.isEmpty());
     assertTrue(factores.stream().anyMatch(f -> f.getTitulo().equals("Tickets Críticos Abiertos")));
   }
+
+
+  @Test
+  void testHealthScoreSinEncuestasNoPenaliza() {
+
+      when(encuestaCsatRepository.findAverageScoreByClienteId(10L))
+          .thenReturn(0.0);
+
+      int score = healthScoreService
+          .recalcularYActualizarHealthScore(cliente);
+
+      // Sin tickets abiertos, críticos ni respuestas CSAT:
+      // El cliente conserva el puntaje base de 100.
+      assertEquals(100, score);
+  }
+
 }

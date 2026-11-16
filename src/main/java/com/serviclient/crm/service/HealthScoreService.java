@@ -1,7 +1,7 @@
 package com.serviclient.crm.service;
 
 import com.serviclient.crm.repository.ClienteRepository;
-import com.serviclient.crm.repository.EncuestaSatisfaccionRepository;
+import com.serviclient.crm.repository.EncuestaCsatRepository;
 import com.serviclient.crm.repository.HealthScoreHistorialRepository;
 import com.serviclient.crm.repository.TicketRepository;
 import com.serviclient.crm.entity.Cliente;
@@ -40,7 +40,7 @@ public class HealthScoreService implements IHealthScoreService {
 
   private final ClienteRepository clienteRepository;
   private final TicketRepository ticketRepository;
-  private final EncuestaSatisfaccionRepository encuestaSatisfaccionRepository;
+  private final EncuestaCsatRepository encuestaCsatRepository;
   private final HealthScoreHistorialRepository healthScoreHistorialRepository;
 
   /**
@@ -87,15 +87,20 @@ public class HealthScoreService implements IHealthScoreService {
       puntaje -= (int) (ticketsCriticos * 15);
     }
 
-    // 3. Ajuste por CSAT
-    Double csatPromedio = encuestaSatisfaccionRepository.obtenerPromedioCsatPorCliente(cliente.getId());
-    if (csatPromedio != null) {
+    
+    // 3. Ajuste por CSAT: utilizar respuestas reales del Portal Cliente
+    Double csatPromedio = encuestaCsatRepository
+        .findAverageScoreByClienteId(cliente.getId());
+
+    // Sin encuestas respondidas, no se aplica penalización ni bonificación.
+    if (csatPromedio != null && csatPromedio > 0.0) {
       if (csatPromedio < 3.0) {
         puntaje -= 20;
       } else if (csatPromedio >= 4.5) {
         puntaje += 5;
       }
     }
+
 
     // Normalizar entre 0 y 100
     puntaje = Math.max(0, Math.min(100, puntaje));

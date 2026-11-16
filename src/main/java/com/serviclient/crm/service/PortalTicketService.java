@@ -133,21 +133,38 @@ public class PortalTicketService implements IPortalTicketService {
     if (encuesta.getEstado() != EstadoEncuestaCsat.PENDIENTE || !encuesta.isActiva()) {
       throw new IllegalArgumentException("Esta encuesta ya fue respondida o ha caducado.");
     }
+    
+    // 1. Validar la puntuación recibida
+    if (puntuacion == null || puntuacion < 1 || puntuacion > 5) {
+      throw new IllegalArgumentException(
+          "La calificación debe estar entre 1 y 5 estrellas.");
+    }
 
-    // 1. Guardar la respuesta
+    // 2. Validar y normalizar el comentario
+    String comentarioNormalizado =
+        comentario == null ? null : comentario.trim();
+
+    if (comentarioNormalizado != null
+        && comentarioNormalizado.length() > 2000) {
+      throw new IllegalArgumentException(
+          "El comentario no puede superar los 2000 caracteres.");
+    }
+
+    // 3. Guardar la respuesta validada
     RespuestaCsat respuesta = RespuestaCsat.builder()
         .encuesta(encuesta)
         .puntuacion(puntuacion)
-        .comentario(comentario)
+        .comentario(comentarioNormalizado)
         .build();
+
     respuestaCsatRepository.save(respuesta);
 
-    // 2. Marcar la encuesta como respondida
+    // 4. Marcar la encuesta como respondida
     encuesta.setEstado(EstadoEncuestaCsat.RESPONDIDA);
     encuesta.setFechaRespuesta(LocalDateTime.now());
     encuestaCsatRepository.save(encuesta);
 
-    // 3. Impactar el Health Score del cliente B2B
+    // 5. Impactar el Health Score del cliente B2B
     healthScoreService.recalcularYActualizarHealthScore(encuesta.getCliente());
   }
 

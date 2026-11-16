@@ -4,7 +4,7 @@ import com.serviclient.crm.config.security.CustomUserDetails;
 import com.serviclient.crm.dto.ClienteDto;
 import com.serviclient.crm.entity.Cliente;
 import com.serviclient.crm.entity.Contacto;
-import com.serviclient.crm.entity.EncuestaSatisfaccion;
+import com.serviclient.crm.entity.EncuestaCsat;
 import com.serviclient.crm.entity.Renovacion;
 import com.serviclient.crm.entity.Ticket;
 import com.serviclient.crm.entity.TicketHistorial;
@@ -319,7 +319,8 @@ public class ClienteController {
     List<FactorSalud> factores = healthScoreService.obtenerFactoresRiesgo(cliente);
 
     // Encuestas vía capa de servicio (valida tenant — fix de seguridad)
-    List<EncuestaSatisfaccion> encuestas = clienteService.obtenerEncuestasPorCliente(id);
+    List<EncuestaCsat> encuestas =
+    clienteService.obtenerEncuestasPorCliente(id);
 
     // Actividades recientes: los tickets provienen del Cliente ya validado por
     // obtenerPorIdYEmpresa

@@ -1,14 +1,5 @@
 package com.serviclient.crm.service;
 
-import com.serviclient.crm.repository.ClienteRepository;
-import com.serviclient.crm.repository.ClienteServicioRepository;
-import com.serviclient.crm.repository.ContactoRepository;
-import com.serviclient.crm.repository.EncuestaSatisfaccionRepository;
-import com.serviclient.crm.repository.HealthScoreHistorialRepository;
-import com.serviclient.crm.repository.RenovacionRepository;
-import com.serviclient.crm.repository.ServicioRepository;
-import com.serviclient.crm.repository.TicketRepository;
-import com.serviclient.crm.repository.UsuarioRepository;
 import com.serviclient.crm.dto.ClienteDto;
 import com.serviclient.crm.entity.*;
 import com.serviclient.crm.entity.enums.EstadoCliente;
@@ -16,16 +7,21 @@ import com.serviclient.crm.entity.enums.EstadoSaludCliente;
 import com.serviclient.crm.entity.enums.EstadoServicioCliente;
 import com.serviclient.crm.entity.enums.EstadoTicket;
 import com.serviclient.crm.entity.enums.PrioridadTicket;
-
+import com.serviclient.crm.repository.ClienteRepository;
+import com.serviclient.crm.repository.ClienteServicioRepository;
+import com.serviclient.crm.repository.ContactoRepository;
+import com.serviclient.crm.repository.EncuestaCsatRepository;
+import com.serviclient.crm.repository.HealthScoreHistorialRepository;
+import com.serviclient.crm.repository.RenovacionRepository;
+import com.serviclient.crm.repository.ServicioRepository;
+import com.serviclient.crm.repository.TicketRepository;
+import com.serviclient.crm.repository.UsuarioRepository;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import lombok.Builder;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -74,12 +70,11 @@ public class ClienteService implements IClienteService {
   private final HealthScoreHistorialRepository healthScoreHistorialRepository;
   private final UsuarioRepository usuarioRepository;
   private final TicketRepository ticketRepository;
-  private final EncuestaSatisfaccionRepository encuestaSatisfaccionRepository;
+  private final EncuestaCsatRepository encuestaCsatRepository;
   private final RenovacionRepository renovacionRepository;
   private final EmpresaService empresaService;
   private final HealthScoreService healthScoreService;
   private final CuentaPortalService cuentaPortalService;
-
 
   @Transactional(readOnly = true)
   public MetricasClientes obtenerMetricas(Long empresaId) {
@@ -128,51 +123,74 @@ public class ClienteService implements IClienteService {
   @Transactional(readOnly = true)
   public byte[] exportarClientesExcel(Long empresaId, String busqueda, EstadoCliente estado) {
 
-      Pageable pageable = PageRequest.of(0, Integer.MAX_VALUE, Sort.by("nombreComercial").ascending());
-      List<Cliente> clientes = listarClientes(empresaId, busqueda, estado, pageable).getContent();
+    Pageable pageable =
+        PageRequest.of(0, Integer.MAX_VALUE, Sort.by("nombreComercial").ascending());
+    List<Cliente> clientes = listarClientes(empresaId, busqueda, estado, pageable).getContent();
 
-      try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-          Sheet sheet = workbook.createSheet("Clientes");
+    try (Workbook workbook = new XSSFWorkbook();
+        ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+      Sheet sheet = workbook.createSheet("Clientes");
 
-          CellStyle headerStyle = workbook.createCellStyle();
-          Font headerFont = workbook.createFont();
-          headerFont.setBold(true);
-          headerStyle.setFont(headerFont);
-          headerStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-          headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+      CellStyle headerStyle = workbook.createCellStyle();
+      Font headerFont = workbook.createFont();
+      headerFont.setBold(true);
+      headerStyle.setFont(headerFont);
+      headerStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+      headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
-          String[] columnas = {"Nombre Comercial", "Razón Social", "RUC", "Industria", "Responsable", "Servicio Contratado", "Estado Salud", "Health Score"};
-          Row headerRow = sheet.createRow(0);
-          for (int i = 0; i < columnas.length; i++) {
-              Cell cell = headerRow.createCell(i);
-              cell.setCellValue(columnas[i]);
-              cell.setCellStyle(headerStyle);
-          }
-
-          int rowIdx = 1;
-          for (Cliente cliente : clientes) {
-              Row row = sheet.createRow(rowIdx++);
-              row.createCell(0).setCellValue(cliente.getNombreComercial() != null ? cliente.getNombreComercial() : "");
-              row.createCell(1).setCellValue(cliente.getRazonSocial() != null ? cliente.getRazonSocial() : "");
-              row.createCell(2).setCellValue(cliente.getRuc() != null ? cliente.getRuc() : "");
-              row.createCell(3).setCellValue(cliente.getIndustria() != null ? cliente.getIndustria() : "");
-              row.createCell(4).setCellValue(cliente.getResponsable() != null ? cliente.getResponsable().getNombreCompleto() : "Sin asignar");
-              row.createCell(5).setCellValue(cliente.getServicioContratado() != null ? cliente.getServicioContratado() : "");
-              row.createCell(6).setCellValue(cliente.getEstadoSalud() != null ? cliente.getEstadoSalud().getEtiqueta() : "");
-              row.createCell(7).setCellValue(cliente.getHealthScore() != null ? cliente.getHealthScore() : 0);
-          }
-
-          for (int i = 0; i < columnas.length; i++) {
-              sheet.autoSizeColumn(i);
-          }
-
-          workbook.write(out);
-          return out.toByteArray();
-          
-      } catch (IOException e) {
-          log.error("Error al generar el archivo Excel de clientes", e);
-          throw new RuntimeException("No se pudo generar el archivo Excel.");
+      String[] columnas = {
+        "Nombre Comercial",
+        "Razón Social",
+        "RUC",
+        "Industria",
+        "Responsable",
+        "Servicio Contratado",
+        "Estado Salud",
+        "Health Score"
+      };
+      Row headerRow = sheet.createRow(0);
+      for (int i = 0; i < columnas.length; i++) {
+        Cell cell = headerRow.createCell(i);
+        cell.setCellValue(columnas[i]);
+        cell.setCellStyle(headerStyle);
       }
+
+      int rowIdx = 1;
+      for (Cliente cliente : clientes) {
+        Row row = sheet.createRow(rowIdx++);
+        row.createCell(0)
+            .setCellValue(cliente.getNombreComercial() != null ? cliente.getNombreComercial() : "");
+        row.createCell(1)
+            .setCellValue(cliente.getRazonSocial() != null ? cliente.getRazonSocial() : "");
+        row.createCell(2).setCellValue(cliente.getRuc() != null ? cliente.getRuc() : "");
+        row.createCell(3)
+            .setCellValue(cliente.getIndustria() != null ? cliente.getIndustria() : "");
+        row.createCell(4)
+            .setCellValue(
+                cliente.getResponsable() != null
+                    ? cliente.getResponsable().getNombreCompleto()
+                    : "Sin asignar");
+        row.createCell(5)
+            .setCellValue(
+                cliente.getServicioContratado() != null ? cliente.getServicioContratado() : "");
+        row.createCell(6)
+            .setCellValue(
+                cliente.getEstadoSalud() != null ? cliente.getEstadoSalud().getEtiqueta() : "");
+        row.createCell(7)
+            .setCellValue(cliente.getHealthScore() != null ? cliente.getHealthScore() : 0);
+      }
+
+      for (int i = 0; i < columnas.length; i++) {
+        sheet.autoSizeColumn(i);
+      }
+
+      workbook.write(out);
+      return out.toByteArray();
+
+    } catch (IOException e) {
+      log.error("Error al generar el archivo Excel de clientes", e);
+      throw new RuntimeException("No se pudo generar el archivo Excel.");
+    }
   }
 
   @Transactional(readOnly = true)
@@ -191,23 +209,28 @@ public class ClienteService implements IClienteService {
   public Cliente obtenerPorIdYEmpresa(Long id, Long empresaId) {
     return clienteRepository
         .findByIdAndEmpresaId(id, empresaId)
-        .orElseThrow(
-            () -> {
-              log.warn("Acceso rechazado a cliente. clienteId={}, empresaId={}", id, empresaId);
+        .orElseThrow(() -> {
+          log.warn("Acceso rechazado a cliente. clienteId={}, empresaId={}", id, empresaId);
 
-              return new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente no encontrado.");
-            });
+          return new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente no encontrado.");
+        });
   }
 
   @Transactional(readOnly = true)
   public KpisCliente360 obtenerKpisCliente360(Cliente cliente) {
-    long abiertos = ticketRepository.countByClienteIdAndEstadoNot(cliente.getId(), EstadoTicket.CERRADO);
+
+    long abiertos =
+        ticketRepository.countByClienteIdAndEstadoNot(cliente.getId(), EstadoTicket.CERRADO);
+
     long criticos =
         ticketRepository.countByClienteIdAndPrioridadAndEstadoNot(
             cliente.getId(), PrioridadTicket.CRITICA, EstadoTicket.CERRADO);
 
+    // Consultar únicamente respuestas CSAT reales.
+    Double promedioCsat = encuestaCsatRepository.findAverageScoreByClienteId(cliente.getId());
+
     return KpisCliente360.builder()
-        .csat(cliente.getCsatPromedio() != null ? cliente.getCsatPromedio() : 0.0)
+        .csat(promedioCsat != null ? promedioCsat : 0.0)
         .ticketsAbiertos(abiertos)
         .ticketsCriticos(criticos)
         .diasParaRenovacion(cliente.getDiasParaRenovacion())
@@ -266,16 +289,15 @@ public class ClienteService implements IClienteService {
         servicioRepository.findByEmpresaId(empresaId).stream()
             .filter(s -> s.getNombre().equalsIgnoreCase(nombreServicio))
             .findFirst()
-            .orElseGet(
-                () ->
-                    servicioRepository.save(
-                        Servicio.builder()
-                            .empresa(empresa)
-                            .nombre(nombreServicio)
-                            .descripcion(nombreServicio + " para cliente")
-                            .codigo("SRV-" + Math.abs(nombreServicio.hashCode() % 10000))
-                            .estado("ACTIVO")
-                            .build()));
+            .orElseGet(() ->
+                servicioRepository.save(
+                    Servicio.builder()
+                        .empresa(empresa)
+                        .nombre(nombreServicio)
+                        .descripcion(nombreServicio + " para cliente")
+                        .codigo("SRV-" + Math.abs(nombreServicio.hashCode() % 10000))
+                        .estado("ACTIVO")
+                        .build()));
 
     LocalDate fechaIni = dto.getFechaInicio() != null ? dto.getFechaInicio() : LocalDate.now();
     LocalDate fechaFin =
@@ -374,16 +396,15 @@ public class ClienteService implements IClienteService {
           servicioRepository.findByEmpresaId(empresaId).stream()
               .filter(s -> s.getNombre().equalsIgnoreCase(nombreServicio))
               .findFirst()
-              .orElseGet(
-                  () ->
-                      servicioRepository.save(
-                          Servicio.builder()
-                              .empresa(empresa)
-                              .nombre(nombreServicio)
-                              .descripcion(nombreServicio + " para cliente")
-                              .codigo("SRV-" + Math.abs(nombreServicio.hashCode() % 10000))
-                              .estado("ACTIVO")
-                              .build()));
+              .orElseGet(() ->
+                  servicioRepository.save(
+                      Servicio.builder()
+                          .empresa(empresa)
+                          .nombre(nombreServicio)
+                          .descripcion(nombreServicio + " para cliente")
+                          .codigo("SRV-" + Math.abs(nombreServicio.hashCode() % 10000))
+                          .estado("ACTIVO")
+                          .build()));
 
       // Actualizar o crear ClienteServicio
       List<ClienteServicio> serviciosActuales = clienteServicioRepository.findByClienteId(id);
@@ -683,8 +704,8 @@ public class ClienteService implements IClienteService {
 
   @Override
   @Transactional(readOnly = true)
-  public List<EncuestaSatisfaccion> obtenerEncuestasPorCliente(Long clienteId) {
-    return encuestaSatisfaccionRepository.findByClienteId(clienteId);
+  public List<EncuestaCsat> obtenerEncuestasPorCliente(Long clienteId) {
+    return encuestaCsatRepository.findByClienteId(clienteId);
   }
 
   @Override

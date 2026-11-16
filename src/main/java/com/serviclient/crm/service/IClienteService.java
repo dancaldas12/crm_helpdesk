@@ -4,10 +4,11 @@ import com.serviclient.crm.dto.ClienteDto;
 import com.serviclient.crm.entity.Cliente;
 import com.serviclient.crm.entity.ClienteServicio;
 import com.serviclient.crm.entity.Contacto;
-import com.serviclient.crm.entity.EncuestaSatisfaccion;
+import com.serviclient.crm.entity.EncuestaCsat;
 import com.serviclient.crm.entity.Renovacion;
 import com.serviclient.crm.entity.enums.EstadoCliente;
 import com.serviclient.crm.service.CuentaPortalService.CredencialesTemporales;
+
 import java.util.List;
 import lombok.Builder;
 import lombok.Getter;
@@ -226,7 +227,7 @@ public interface IClienteService {
      * @param clienteId identificador del cliente
      * @return lista de encuestas registradas
      */
-    List<EncuestaSatisfaccion> obtenerEncuestasPorCliente(Long clienteId);
+    List<EncuestaCsat> obtenerEncuestasPorCliente(Long clienteId);
 
     /**
      * Obtiene el listado de contratos y renovaciones vinculados al cliente.

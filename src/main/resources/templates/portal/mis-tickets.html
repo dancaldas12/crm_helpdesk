@@ -578,66 +578,177 @@
     <!-- ========================================================================= -->
     <!-- MODAL FLOTANTE: ENCUESTA CSAT -->
     <!-- ========================================================================= -->
+
+    <!-- MODAL FLOTANTE: ENCUESTA CSAT -->
     <div id="encuestaCsatModal"
         class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-        <div
-            class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-sm w-full p-6 sm:p-8 relative text-center">
 
-            <button type="button" id="closeEncuestaModalBtn"
-                class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition">
-                <i class="fa-solid fa-xmark text-sm"></i>
+        <div role="dialog" aria-modal="true" aria-labelledby="csatTitulo" class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md
+               max-h-[90vh] overflow-y-auto p-6 sm:p-8">
+
+            <!-- Cerrar -->
+            <button type="button" id="closeEncuestaModalBtn" aria-label="Cerrar encuesta" class="absolute top-4 right-4 w-9 h-9 rounded-full
+                   flex items-center justify-center text-slate-400
+                   hover:bg-slate-100 hover:text-slate-700 transition">
+                <i class="fa-solid fa-xmark"></i>
             </button>
 
-            <div
-                class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center text-xl mx-auto mb-4">
-                <i class="fa-solid fa-face-smile"></i>
-            </div>
-
-            <h3 class="text-lg font-bold text-slate-900">¿Qué te pareció el servicio?</h3>
-            <p class="text-xs text-slate-500 mt-1 mb-5">Ticket <span id="csatTicketNumero"
-                    class="font-bold text-slate-700"></span></p>
-
-            <form th:action="@{/portal/mis-tickets/encuestas/responder}" method="post">
-                <input type="hidden" name="encuestaId" id="csatEncuestaId" value="">
-
-                <!-- Selector de Estrellas (Radio Buttons Ocultos) -->
-                <div class="flex justify-center gap-2 mb-6 flex-row-reverse" id="star-rating">
-                    <input type="radio" name="puntaje" id="star5" value="5" class="hidden peer/5" required>
-                    <label for="star5"
-                        class="cursor-pointer text-slate-300 peer-checked/5:text-amber-400 hover:text-amber-400 transition text-3xl"><i
-                            class="fa-solid fa-star"></i></label>
-
-                    <input type="radio" name="puntaje" id="star4" value="4" class="hidden peer/4">
-                    <label for="star4"
-                        class="cursor-pointer text-slate-300 peer-checked/4:text-amber-400 peer-checked/5:text-amber-400 hover:text-amber-400 transition text-3xl"><i
-                            class="fa-solid fa-star"></i></label>
-
-                    <input type="radio" name="puntaje" id="star3" value="3" class="hidden peer/3">
-                    <label for="star3"
-                        class="cursor-pointer text-slate-300 peer-checked/3:text-amber-400 peer-checked/4:text-amber-400 peer-checked/5:text-amber-400 hover:text-amber-400 transition text-3xl"><i
-                            class="fa-solid fa-star"></i></label>
-
-                    <input type="radio" name="puntaje" id="star2" value="2" class="hidden peer/2">
-                    <label for="star2"
-                        class="cursor-pointer text-slate-300 peer-checked/2:text-amber-400 peer-checked/3:text-amber-400 peer-checked/4:text-amber-400 peer-checked/5:text-amber-400 hover:text-amber-400 transition text-3xl"><i
-                            class="fa-solid fa-star"></i></label>
-
-                    <input type="radio" name="puntaje" id="star1" value="1" class="hidden peer/1">
-                    <label for="star1"
-                        class="cursor-pointer text-slate-300 peer-checked/1:text-amber-400 peer-checked/2:text-amber-400 peer-checked/3:text-amber-400 peer-checked/4:text-amber-400 peer-checked/5:text-amber-400 hover:text-amber-400 transition text-3xl"><i
-                            class="fa-solid fa-star"></i></label>
+            <!-- Encabezado -->
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-indigo-50
+                        text-indigo-600 flex items-center justify-center text-2xl">
+                    <i class="fa-regular fa-comment-dots"></i>
                 </div>
 
-                <textarea name="comentario" rows="3" placeholder="Comentario opcional..."
-                    class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition mb-4"></textarea>
+                <span class="text-xs font-bold uppercase tracking-widest text-indigo-600">
+                    Encuesta de satisfacción
+                </span>
 
-                <button type="submit"
-                    class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-md shadow-indigo-600/20 transition">
-                    Enviar Respuesta
+                <h3 id="csatTitulo" class="text-xl font-extrabold text-slate-900 mt-2">
+                    ¡Tu opinión nos importa!
+                </h3>
+
+                <p class="text-sm text-slate-500 mt-2">
+                    Ayúdanos a mejorar la calidad de nuestro servicio.
+                </p>
+
+                <div class="inline-flex items-center gap-2 mt-4 px-3 py-1.5
+                        rounded-full bg-slate-100 text-xs text-slate-600">
+                    <i class="fa-solid fa-ticket"></i>
+                    Ticket
+                    <span id="csatTicketNumero" class="font-bold text-slate-800"></span>
+                </div>
+            </div>
+
+            <!-- Formulario existente -->
+            <form id="csatForm" th:action="@{/portal/mis-tickets/encuestas/responder}" method="post">
+
+                <input type="hidden" name="encuestaId" id="csatEncuestaId" value="">
+
+                <!-- Calificación -->
+                <div class="rounded-2xl bg-slate-50 border border-slate-100
+                        p-5 text-center mb-5">
+
+                    <p class="text-sm font-bold text-slate-800 mb-2">
+                        ¿Qué tan satisfecho estás con la atención recibida?
+                    </p>
+
+                    <p class="text-xs text-slate-500 mb-4">
+                        Selecciona de 1 a 5 estrellas
+                    </p>
+
+                    <div id="star-rating" class="flex justify-center gap-2 flex-row-reverse">
+
+                        <input type="radio" name="puntaje" id="star5" value="5" class="hidden peer/5" required>
+                        <label for="star5"
+                            class="cursor-pointer text-slate-300 peer-checked/5:text-amber-400 hover:text-amber-400 transition text-3xl">
+                            <i class="fa-solid fa-star"></i>
+                        </label>
+
+                        <input type="radio" name="puntaje" id="star4" value="4" class="hidden peer/4">
+                        <label for="star4"
+                            class="cursor-pointer text-slate-300 peer-checked/4:text-amber-400 peer-checked/5:text-amber-400 hover:text-amber-400 transition text-3xl">
+                            <i class="fa-solid fa-star"></i>
+                        </label>
+
+                        <input type="radio" name="puntaje" id="star3" value="3" class="hidden peer/3">
+                        <label for="star3"
+                            class="cursor-pointer text-slate-300 peer-checked/3:text-amber-400 peer-checked/4:text-amber-400 peer-checked/5:text-amber-400 hover:text-amber-400 transition text-3xl">
+                            <i class="fa-solid fa-star"></i>
+                        </label>
+
+                        <input type="radio" name="puntaje" id="star2" value="2" class="hidden peer/2">
+                        <label for="star2"
+                            class="cursor-pointer text-slate-300 peer-checked/2:text-amber-400 peer-checked/3:text-amber-400 peer-checked/4:text-amber-400 peer-checked/5:text-amber-400 hover:text-amber-400 transition text-3xl">
+                            <i class="fa-solid fa-star"></i>
+                        </label>
+
+                        <input type="radio" name="puntaje" id="star1" value="1" class="hidden peer/1">
+                        <label for="star1"
+                            class="cursor-pointer text-slate-300 peer-checked/1:text-amber-400 peer-checked/2:text-amber-400 peer-checked/3:text-amber-400 peer-checked/4:text-amber-400 peer-checked/5:text-amber-400 hover:text-amber-400 transition text-3xl">
+                            <i class="fa-solid fa-star"></i>
+                        </label>
+                    </div>
+
+                    <p id="csatRatingTexto" class="text-xs font-semibold text-slate-500 mt-3" aria-live="polite">
+                        Selecciona tu calificación
+                    </p>
+                </div>
+
+                <!-- Aspectos de la atención -->
+                <div class="mb-5">
+                    <p class="text-sm font-bold text-slate-800 mb-1">
+                        ¿Qué aspecto influyó en tu experiencia?
+                    </p>
+
+                    <p class="text-xs text-slate-500 mb-3">
+                        Opcional. Puedes seleccionar varios.
+                    </p>
+
+                    <div id="csatAspectos" class="flex flex-wrap gap-2">
+
+                        <button type="button" data-csat-aspecto="Tiempo de respuesta" aria-pressed="false" class="px-3 py-2 rounded-xl border border-slate-200
+                               text-xs font-semibold text-slate-600
+                               hover:border-indigo-400 transition">
+                            <i class="fa-regular fa-clock mr-1"></i>
+                            Tiempo de respuesta
+                        </button>
+
+                        <button type="button" data-csat-aspecto="Trato del agente" aria-pressed="false" class="px-3 py-2 rounded-xl border border-slate-200
+                               text-xs font-semibold text-slate-600
+                               hover:border-indigo-400 transition">
+                            <i class="fa-regular fa-user mr-1"></i>
+                            Trato del agente
+                        </button>
+
+                        <button type="button" data-csat-aspecto="Solución brindada" aria-pressed="false" class="px-3 py-2 rounded-xl border border-slate-200
+                               text-xs font-semibold text-slate-600
+                               hover:border-indigo-400 transition">
+                            <i class="fa-regular fa-circle-check mr-1"></i>
+                            Solución brindada
+                        </button>
+
+                        <button type="button" data-csat-aspecto="Comunicación" aria-pressed="false" class="px-3 py-2 rounded-xl border border-slate-200
+                               text-xs font-semibold text-slate-600
+                               hover:border-indigo-400 transition">
+                            <i class="fa-regular fa-comments mr-1"></i>
+                            Comunicación
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Comentario -->
+                <div class="mb-5">
+                    <label for="csatComentario" class="block text-sm font-bold text-slate-800 mb-2">
+                        Cuéntanos un poco más
+                    </label>
+
+                    <textarea id="csatComentario" name="comentario" rows="3" maxlength="1000"
+                        placeholder="¿Qué hicimos bien o qué podríamos mejorar?" class="w-full px-4 py-3 text-sm rounded-xl border
+                           border-slate-200 focus:outline-none
+                           focus:border-indigo-500 focus:ring-2
+                           focus:ring-indigo-100 transition resize-none"></textarea>
+
+                    <p class="text-xs text-slate-400 mt-1">
+                        Tu comentario es opcional.
+                    </p>
+                </div>
+
+                <!-- Enviar -->
+                <button type="submit" class="w-full py-3 rounded-xl bg-indigo-600
+                       hover:bg-indigo-700 text-white font-bold text-sm
+                       shadow-md shadow-indigo-600/20 transition">
+                    <i class="fa-regular fa-paper-plane mr-2"></i>
+                    Enviar evaluación
                 </button>
+
+                <p class="text-center text-xs text-slate-400 mt-4">
+                    Gracias por ayudarnos a mejorar ServiClient.
+                </p>
             </form>
         </div>
     </div>
+
 
     <!-- SCRIPTS -->
     <script th:inline="javascript">
@@ -668,6 +779,121 @@
         const closeEncuestaBtn = document.getElementById('closeEncuestaModalBtn');
         const csatTicketNumero = document.getElementById('csatTicketNumero');
         const csatEncuestaId = document.getElementById('csatEncuestaId');
+
+
+        // Calificación y aspectos de la encuesta CSAT
+        const csatForm = document.getElementById('csatForm');
+        const csatComentario = document.getElementById('csatComentario');
+        const csatRatingTexto = document.getElementById('csatRatingTexto');
+
+        const csatAspectos = Array.from(
+            document.querySelectorAll('[data-csat-aspecto]')
+        );
+
+        const csatCalificaciones = document.querySelectorAll(
+            '#star-rating input[name="puntaje"]'
+        );
+
+        const mensajesCalificacion = {
+            1: 'Muy insatisfecho',
+            2: 'Insatisfecho',
+            3: 'Regular',
+            4: 'Satisfecho',
+            5: 'Muy satisfecho'
+        };
+
+        // Mostrar el significado de la calificación elegida
+        csatCalificaciones.forEach(radio => {
+            radio.addEventListener('change', () => {
+                csatRatingTexto.textContent =
+                    mensajesCalificacion[radio.value];
+
+                csatRatingTexto.classList.remove('text-rose-600');
+                csatRatingTexto.classList.add('text-indigo-600');
+            });
+        });
+
+        // Seleccionar o deseleccionar aspectos de la atención
+        csatAspectos.forEach(boton => {
+            boton.addEventListener('click', () => {
+                const seleccionado =
+                    boton.getAttribute('aria-pressed') !== 'true';
+
+                boton.setAttribute(
+                    'aria-pressed',
+                    String(seleccionado)
+                );
+
+                boton.classList.toggle('bg-indigo-50', seleccionado);
+                boton.classList.toggle('border-indigo-500', seleccionado);
+                boton.classList.toggle('text-indigo-700', seleccionado);
+
+                boton.classList.toggle('border-slate-200', !seleccionado);
+                boton.classList.toggle('text-slate-600', !seleccionado);
+            });
+        });
+
+        // Guardar aspectos y comentario en el campo existente
+        // "comentario", sin modificar la base de datos.
+        let csatComentarioFinal = null;
+
+        if (csatForm && csatComentario) {
+            csatComentarioFinal = document.createElement('input');
+            csatComentarioFinal.type = 'hidden';
+            csatComentarioFinal.name = 'comentario';
+
+            csatForm.appendChild(csatComentarioFinal);
+
+            // El textarea conserva el texto visible del usuario.
+            // Solo el campo oculto se envía al controlador.
+            csatComentario.removeAttribute('name');
+
+            // Validación manual porque los radios están ocultos.
+            csatForm.noValidate = true;
+
+            csatForm.addEventListener('submit', (event) => {
+                const calificacion = csatForm.querySelector(
+                    'input[name="puntaje"]:checked'
+                );
+
+                if (!calificacion) {
+                    event.preventDefault();
+
+                    csatRatingTexto.textContent =
+                        'Debes seleccionar una calificación.';
+
+                    csatRatingTexto.classList.remove('text-indigo-600');
+                    csatRatingTexto.classList.add('text-rose-600');
+                    return;
+                }
+
+                const aspectosElegidos = csatAspectos
+                    .filter(boton =>
+                        boton.getAttribute('aria-pressed') === 'true'
+                    )
+                    .map(boton => boton.dataset.csatAspecto);
+
+                const comentarioLibre = csatComentario.value.trim();
+
+                const contenido = [];
+
+                if (aspectosElegidos.length > 0) {
+                    contenido.push(
+                        'Aspectos evaluados: ' +
+                        aspectosElegidos.join(', ')
+                    );
+                }
+
+                if (comentarioLibre) {
+                    contenido.push(
+                        'Comentario: ' + comentarioLibre
+                    );
+                }
+
+                csatComentarioFinal.value = contenido.join('\n\n');
+            });
+        }
+
 
         // 1. Dropdown Perfil Inferior
         if (userBtn && userDropdown) {
@@ -716,12 +942,51 @@
             if (passModal) passModal.classList.add('hidden');
         }
 
+
         function abrirModalEncuesta(idEncuesta, numeroTicket) {
-            if (notiDropdown) notiDropdown.classList.add('hidden');
+            if (notiDropdown) {
+                notiDropdown.classList.add('hidden');
+            }
+
+            // Limpiar respuestas de una encuesta anterior
+            if (csatForm) {
+                csatForm.reset();
+            }
+
+            if (csatComentarioFinal) {
+                csatComentarioFinal.value = '';
+            }
+
+            csatRatingTexto.textContent =
+                'Selecciona tu calificación';
+
+            csatRatingTexto.classList.remove(
+                'text-indigo-600',
+                'text-rose-600'
+            );
+
+            csatAspectos.forEach(boton => {
+                boton.setAttribute('aria-pressed', 'false');
+
+                boton.classList.remove(
+                    'bg-indigo-50',
+                    'border-indigo-500',
+                    'text-indigo-700'
+                );
+
+                boton.classList.add(
+                    'border-slate-200',
+                    'text-slate-600'
+                );
+            });
+
+            // Asociar la encuesta al ticket correspondiente
             csatEncuestaId.value = idEncuesta;
             csatTicketNumero.textContent = numeroTicket;
+
             encuestaModal.classList.remove('hidden');
         }
+
 
 
         // Eventos Modal Encuesta CSAT
