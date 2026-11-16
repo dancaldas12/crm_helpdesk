@@ -9,7 +9,6 @@ import com.serviclient.crm.service.IRenovacionService;
 import com.serviclient.crm.service.IRenovacionService.MetricasRenovaciones;
 import com.serviclient.crm.service.IUsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -127,12 +126,12 @@ public class RenovacionController {
   @PostMapping("/seguimiento")
   public String registrarSeguimiento(
       @AuthenticationPrincipal CustomUserDetails userDetails,
-      @Parameter(description = "Datos del seguimiento de renovación")
-          @Valid
-          @ModelAttribute("nuevoSeguimiento")
+      @Valid @ModelAttribute("nuevoSeguimiento")
           TicketMensajeDto.RegistrarSeguimientoRenovacion dto,
       BindingResult bindingResult,
+      @RequestParam(value = "origen", required = false) String origen,
       RedirectAttributes redirectAttributes) {
+
     Long empresaId = resolverEmpresaId(userDetails);
     Usuario autor = usuarioService.obtenerUsuarioAutenticado().orElse(null);
 
@@ -143,11 +142,21 @@ public class RenovacionController {
     }
 
     try {
-      renovacionService.registrarSeguimiento(dto, autor, empresaId);
+      var seguimiento = renovacionService.registrarSeguimiento(dto, autor, empresaId);
+
       redirectAttributes.addFlashAttribute(
           "successMessage", "Seguimiento de renovación guardado exitosamente.");
+
+      // Si proviene de Cliente 360°, regresar al cliente correspondiente
+      if ("cliente360".equals(origen)) {
+        Long clienteId = seguimiento.getRenovacion().getCliente().getId();
+
+        return "redirect:/clientes/" + clienteId + "?tab=renovacion";
+      }
+
     } catch (Exception ex) {
       log.error("Error al registrar seguimiento", ex);
+
       redirectAttributes.addFlashAttribute(
           "errorMessage", "Error al guardar seguimiento: " + ex.getMessage());
     }

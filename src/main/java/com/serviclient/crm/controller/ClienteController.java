@@ -10,6 +10,7 @@ import com.serviclient.crm.entity.Ticket;
 import com.serviclient.crm.entity.TicketHistorial;
 import com.serviclient.crm.entity.Usuario;
 import com.serviclient.crm.entity.enums.EstadoCliente;
+import com.serviclient.crm.entity.enums.EstadoRenovacion;
 import com.serviclient.crm.entity.enums.Rol;
 import com.serviclient.crm.repository.TicketHistorialRepository;
 import com.serviclient.crm.service.CuentaPortalService.CredencialesTemporales;
@@ -24,6 +25,7 @@ import com.serviclient.crm.service.IUsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -347,6 +349,11 @@ public class ClienteController {
     model.addAttribute("activeMenu", "clientes");
     model.addAttribute("contactosActivos", contactosActivos);
     model.addAttribute("contactosInactivos", contactosInactivos);
+
+    // Datos necesarios para el modal de seguimiento de renovaciones
+    model.addAttribute("agentes", usuarioService.obtenerAgentesYAdminsPorEmpresa(empresaId));
+    model.addAttribute("estadosRenovacion", EstadoRenovacion.values());
+    model.addAttribute("fechaHoy", LocalDate.now());
 
     return "clientes/cliente360";
   }

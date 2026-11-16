@@ -1,0 +1,286 @@
+{
+  "info": {
+    "_postman_id": "90796068-22ca-4ffc-b4d0-5293b9693eeb",
+    "name": "ServiClient - Pruebas Controller",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "31742500"
+  },
+  "item": [
+    {
+      "name": "01 - ACCESO Y AUTENTICACIÓN",
+      "item": [
+        {
+          "name": "01 - Acceso a clientes sin autenticación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "\r\npm.test(\"CP-01: Código HTTP 302\", function () {\r\n    pm.response.to.have.status(302);\r\n});\r\n\r\npm.test(\"CP-01: Redirección al login\", function () {\r\n    const destino = pm.response.headers.get(\"Location\");\r\n\r\n    pm.expect(destino).to.exist;\r\n    pm.expect(destino).to.include(\"/login\");\r\n});\r\n\r\npm.test(\"CP-01: Tiempo de respuesta menor a 10 segundos\", function () {\r\n    pm.expect(pm.response.responseTime).to.be.below(10000);\r\n});\r\n\r\npm.test(\"CP-01: Redirección dentro de ServiClient\", function () {\r\n    const destino = pm.response.headers.get(\"Location\");\r\n\r\n    const esRelativa = destino.startsWith(\"/\");\r\n    const esMismoServidor =\r\n        destino.startsWith(\"https://crm-helpdesk.duckdns.org/\");\r\n\r\n    pm.expect(esRelativa || esMismoServidor).to.be.true;\r\n});\r\n\r\nconsole.log(\"===== RESULTADO CP-01 =====\");\r\nconsole.log(\"HTTP:\", pm.response.code);\r\nconsole.log(\"Tiempo:\", pm.response.responseTime, \"ms\");\r\nconsole.log(\"Redirección:\", pm.response.headers.get(\"Location\"));\r\n"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://crm-helpdesk.duckdns.org/clientes",
+              "protocol": "https",
+              "host": [
+                "crm-helpdesk",
+                "duckdns",
+                "org"
+              ],
+              "path": [
+                "clientes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02 - Visualización del formulario de login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const html = pm.response.text();\r",
+                  "\r",
+                  "pm.test(\"CP-02: Código HTTP 200\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"CP-02: La respuesta es HTML\", function () {\r",
+                  "    const tipo = pm.response.headers.get(\"Content-Type\") || \"\";\r",
+                  "    pm.expect(tipo).to.include(\"text/html\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"CP-02: Existe el formulario de inicio de sesión\", function () {\r",
+                  "    const formularios = html.match(/<form\\b[^>]*>/gi) || [];\r",
+                  "\r",
+                  "    const existeLogin = formularios.some(form =>\r",
+                  "        /action=[\"']\\/login[\"']/i.test(form) &&\r",
+                  "        /method=[\"']post[\"']/i.test(form)\r",
+                  "    );\r",
+                  "\r",
+                  "    pm.expect(existeLogin).to.be.true;\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"CP-02: Existe el campo de correo electrónico\", function () {\r",
+                  "    pm.expect(html).to.match(/<input\\b[^>]*name=[\"']email[\"']/i);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"CP-02: Existe el campo de contraseña\", function () {\r",
+                  "    pm.expect(html).to.match(/<input\\b[^>]*name=[\"']password[\"']/i);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"CP-02: Tiempo de respuesta menor a 10 segundos\", function () {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(10000);\r",
+                  "});\r",
+                  "\r",
+                  "console.log(\"===== RESULTADO CP-02 =====\");\r",
+                  "console.log(\"HTTP:\", pm.response.code);\r",
+                  "console.log(\"Content-Type:\", pm.response.headers.get(\"Content-Type\"));\r",
+                  "console.log(\"Tiempo:\", pm.response.responseTime, \"ms\");\r",
+                  "\r",
+                  "const campoCsrf = html.match(\r",
+                  "    /<input\\b(?=[^>]*\\bname=[\"']_csrf[\"'])[^>]*>/i\r",
+                  ")?.[0] || \"\";\r",
+                  "\r",
+                  "const tokenCsrf = campoCsrf.match(\r",
+                  "    /\\bvalue=[\"']([^\"']+)[\"']/i\r",
+                  ")?.[1];\r",
+                  "\r",
+                  "pm.test(\"CP-02: Token CSRF disponible\", function () {\r",
+                  "    pm.expect(tokenCsrf).to.be.a(\"string\").and.not.empty;\r",
+                  "});\r",
+                  "\r",
+                  "if (tokenCsrf) {\r",
+                  "    pm.collectionVariables.set(\"csrfToken\", tokenCsrf);\r",
+                  "}\r",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://crm-helpdesk.duckdns.org/login",
+              "protocol": "https",
+              "host": [
+                "crm-helpdesk",
+                "duckdns",
+                "org"
+              ],
+              "path": [
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 - Inicio de sesión válido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"CP-03: Inicio de sesión responde HTTP 302\", function () {\r",
+                  "    pm.response.to.have.status(302);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"CP-03: Redirige al Dashboard\", function () {\r",
+                  "    const destino = pm.response.headers.get(\"Location\") || \"\";\r",
+                  "    pm.expect(destino).to.include(\"/dashboard\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"CP-03: Tiempo de respuesta menor a 10 segundos\", function () {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(10000);\r",
+                  "});\r",
+                  "\r",
+                  "console.log(\"Estado HTTP:\", pm.response.code);\r",
+                  "console.log(\"Redirección:\", pm.response.headers.get(\"Location\"));\r",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "admin@serviclient.com",
+                  "description": "Correo de administrador de prueba",
+                  "type": "text",
+                  "uuid": "81ee7a84-2d74-43ca-9e30-ca7a04a246f0"
+                },
+                {
+                  "key": "password",
+                  "value": "admin123",
+                  "description": "Contraseña de administrador de prueba",
+                  "type": "text",
+                  "uuid": "73f25f7d-6e54-4654-9b60-94b81bcd8c67"
+                },
+                {
+                  "key": "_csrf",
+                  "value": "{{csrfToken}}",
+                  "type": "text",
+                  "uuid": "a4df14e9-4739-48af-8b01-6e9f3dfe8c4e"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://crm-helpdesk.duckdns.org/login",
+              "protocol": "https",
+              "host": [
+                "crm-helpdesk",
+                "duckdns",
+                "org"
+              ],
+              "path": [
+                "login"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - GESTIÓN DE CLIENTES",
+      "item": [
+        {
+          "name": "04 - Listado de clientes autenticado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const respuesta = pm.response.text();\r",
+                  "\r",
+                  "pm.test(\"CP-04: Código HTTP 200\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"CP-04: La respuesta es HTML\", function () {\r",
+                  "    const tipo = pm.response.headers.get(\"Content-Type\") || \"\";\r",
+                  "    pm.expect(tipo).to.include(\"text/html\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"CP-04: Contiene el módulo de clientes\", function () {\r",
+                  "    pm.expect(respuesta.toLowerCase()).to.include(\"clientes\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"CP-04: Incluye el campo de búsqueda\", function () {\r",
+                  "    pm.expect(respuesta).to.match(\r",
+                  "        /name=[\"']busqueda[\"']/i\r",
+                  "    );\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"CP-04: Tiempo menor a 10 segundos\", function () {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(10000);\r",
+                  "});\r",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://crm-helpdesk.duckdns.org/clientes",
+              "protocol": "https",
+              "host": [
+                "crm-helpdesk",
+                "duckdns",
+                "org"
+              ],
+              "path": [
+                "clientes"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "csrfToken",
+      "value": ""
+    }
+  ]
+}

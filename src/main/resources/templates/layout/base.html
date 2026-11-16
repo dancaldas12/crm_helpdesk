@@ -136,9 +136,11 @@
             </header>
 
             <!-- Alerts Banner -->
-            <div style="padding: 20px 32px 0 32px" th:if="${successMessage != null
-                    or errorMessage != null
-                    or portalPasswordTemporal != null}">
+            <div style="padding: 20px 32px 0 32px" th:if="${(successMessage != null
+                        or errorMessage != null
+                        or portalPasswordTemporal != null)
+                        and !(pageTitle == 'Cliente 360°'
+                            and portalPasswordTemporal != null)}">
                 <div th:if="${successMessage != null}" style="
                             background-color: #ecfdf5;
                             border: 1px solid #a7f3d0;

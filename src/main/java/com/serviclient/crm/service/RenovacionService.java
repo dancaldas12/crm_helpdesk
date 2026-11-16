@@ -1,17 +1,15 @@
 package com.serviclient.crm.service;
 
-import com.serviclient.crm.repository.RenovacionRepository;
-import com.serviclient.crm.repository.RenovacionSeguimientoRepository;
 import com.serviclient.crm.dto.TicketMensajeDto;
 import com.serviclient.crm.entity.Renovacion;
 import com.serviclient.crm.entity.RenovacionSeguimiento;
 import com.serviclient.crm.entity.Usuario;
 import com.serviclient.crm.entity.enums.EstadoRenovacion;
+import com.serviclient.crm.repository.RenovacionRepository;
+import com.serviclient.crm.repository.RenovacionSeguimientoRepository;
+import com.serviclient.crm.repository.UsuarioRepository;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
-import lombok.Builder;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +33,7 @@ public class RenovacionService implements IRenovacionService {
   private final RenovacionRepository renovacionRepository;
   private final RenovacionSeguimientoRepository seguimientoRepository;
   private final HealthScoreService healthScoreService;
+  private final UsuarioRepository usuarioRepository;
 
   /**
    * Obtiene la totalidad de contratos y renovaciones registrados en el sistema.
@@ -170,7 +169,8 @@ public class RenovacionService implements IRenovacionService {
   }
 
   /**
-   * Registra una acción de seguimiento validando pertenencia a la empresa y actualizando opcionalmente el estado.
+   * Registra una acción de seguimiento validando pertenencia a la empresa y actualizando
+   * opcionalmente el estado.
    *
    * @param dto datos del formulario de seguimiento
    * @param usuario usuario que registra el evento
@@ -184,22 +184,38 @@ public class RenovacionService implements IRenovacionService {
 
     Renovacion renovacion = obtenerPorId(dto.getRenovacionId());
 
+    // Verificar que la renovación pertenezca a la empresa actual
     if (renovacion.getEmpresa() == null || !empresaId.equals(renovacion.getEmpresa().getId())) {
       throw new IllegalArgumentException("La renovación no pertenece a la empresa actual.");
     }
 
-    if (dto.getEstado() != null) {
-        renovacion.setEstado(dto.getEstado());
-        renovacionRepository.save(renovacion);
+    // Responsable seleccionado en el formulario
+    // Si no se selecciona, utilizar el usuario autenticado
+    Usuario responsable = usuario;
+
+    if (dto.getResponsableId() != null) {
+      responsable =
+          usuarioRepository
+              .findByIdAndEmpresaId(dto.getResponsableId(), empresaId)
+              .orElseThrow(() ->
+                  new IllegalArgumentException(
+                      "El responsable seleccionado no pertenece a esta empresa."));
     }
 
+    // Actualizar el estado de la renovación
+    if (dto.getEstado() != null) {
+      renovacion.setEstado(dto.getEstado());
+      renovacionRepository.save(renovacion);
+    }
+
+    // Registrar el seguimiento con los datos del formulario
     RenovacionSeguimiento seguimiento =
         RenovacionSeguimiento.builder()
             .renovacion(renovacion)
             .comentario(dto.getComentario())
-            .usuario(usuario)
+            .usuario(responsable)
             .estado(dto.getEstado())
-            .fecha(LocalDateTime.now())
+            .fecha(dto.getFecha().atStartOfDay())
             .build();
 
     return seguimientoRepository.save(seguimiento);
