@@ -1,0 +1,10 @@
+# ServiClient - Configuracion de GitHub Linguist
+
+# Biblioteca externa Chart.js
+src/main/resources/static/js/chart.umd.min.js linguist-vendored
+
+# Archivos generados por herramientas de analisis
+.sonar/** linguist-generated
+
+# Documentacion tecnica
+docs/** linguist-documentation
