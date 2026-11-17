@@ -1,0 +1,105 @@
+<!-- Barra lateral (Sidebar) -->
+<aside xmlns:th="http://www.thymeleaf.org" th:fragment="sidebar(activePage)"
+    class="w-64 bg-[#0f172a] text-slate-300 flex flex-col justify-between p-4 flex-shrink-0">
+    <div>
+        <!-- Logo ServiClient -->
+        <div class="flex items-center gap-3 px-2 py-4 mb-6 border-b border-slate-800">
+            <div
+                class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-xl shadow-md shadow-indigo-600/30">
+                <i class="fa-solid fa-tv"></i>
+            </div>
+            <div>
+                <h1 class="text-white font-bold text-lg leading-tight">ServiClient</h1>
+                <span class="text-xs text-slate-400" th:text="${empresaNombre}">Portal del Cliente</span>
+            </div>
+        </div>
+
+        <!-- Navegación -->
+        <nav class="space-y-1">
+
+            <a th:href="@{/portal/mis-tickets}" class="flex items-center gap-3 px-4 py-3 rounded-xl" th:classappend="${activePage == 'tickets'
+                ? 'bg-indigo-600 text-white font-medium shadow-md shadow-indigo-600/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/50 transition'}">
+
+                <i class="fa-solid fa-ticket text-lg"></i>
+                <span>Mis tickets</span>
+            </a>
+
+            <a th:href="@{/portal/tickets/nuevo}" class="flex items-center gap-3 px-4 py-3 rounded-xl" th:classappend="${activePage == 'nuevo'
+                ? 'bg-indigo-600 text-white font-medium shadow-md shadow-indigo-600/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/50 transition'}">
+
+                <i class="fa-solid fa-plus-circle text-lg"></i>
+                <span>Nueva incidencia</span>
+            </a>
+        </nav>
+
+        <!-- Tarjeta Tu Empresa -->
+        <div class="mt-8 p-3 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
+            <div class="flex items-center gap-2 text-[11px] font-bold tracking-wider text-indigo-400 uppercase">
+                <i class="fa-solid fa-building text-xs"></i>
+                <span>Tu Empresa</span>
+            </div>
+            <p class="text-xs font-bold text-white truncate" th:text="${empresaNombre}">NovaTech Industries</p>
+            <p class="text-[10px] text-slate-400">Plan SaaS Enterprise</p>
+        </div>
+    </div>
+
+    <!-- Perfil Inferior con Dropdown Flotante hacia arriba -->
+    <div class="relative pt-4 border-t border-slate-800">
+
+        <!-- Menú Desplegable Popup -->
+        <div id="userDropdown"
+            class="hidden absolute bottom-full left-0 right-0 mb-3 bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 z-40 text-slate-800">
+            <div class="flex items-center gap-3 pb-3 border-b border-slate-100 mb-2">
+                <div class="w-10 h-10 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0"
+                    th:text="${usuarioIniciales}">LM</div>
+                <div class="overflow-hidden">
+                    <p class="text-xs font-bold text-slate-900 truncate" th:text="${usuarioNombre}">Laura Méndez</p>
+                    <p class="text-[11px] text-slate-400 truncate" th:text="${empresaNombre}">NovaTech Industries
+                    </p>
+                </div>
+            </div>
+
+            <nav class="space-y-1">
+                <!-- Botón para abrir modal Mi Cuenta -->
+                <button type="button" id="openMiCuentaModalBtn"
+                    class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition text-left">
+                    <i class="fa-regular fa-user text-slate-400 w-4 text-center"></i>
+                    <span>Mi cuenta</span>
+                </button>
+
+                <!-- Botón para abrir modal Cambiar Contraseña -->
+                <button type="button" id="openPasswordModalBtn"
+                    class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition text-left">
+                    <i class="fa-solid fa-lock text-slate-400 w-4 text-center"></i>
+                    <span>Cambiar contraseña</span>
+                </button>
+
+                <form th:action="@{/portalusuario/logout}" method="post" class="pt-1 border-t border-slate-100 mt-1">
+                    <button type="submit"
+                        class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold text-rose-500 hover:bg-rose-50 transition text-left">
+                        <i class="fa-solid fa-arrow-right-from-bracket text-rose-500 w-4 text-center"></i>
+                        <span>Cerrar sesión</span>
+                    </button>
+                </form>
+            </nav>
+        </div>
+
+        <!-- Botón del Perfil Inferior -->
+        <button id="userDropdownBtn" type="button"
+            class="w-full flex items-center justify-between p-2.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 transition text-left group">
+            <div class="flex items-center gap-3 overflow-hidden">
+                <div class="w-9 h-9 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-sm"
+                    th:text="${usuarioIniciales}">LM</div>
+                <div class="overflow-hidden">
+                    <p class="text-xs font-bold text-white truncate" th:text="${usuarioNombre}">Laura Méndez</p>
+                    <p class="text-[11px] text-slate-400 truncate" th:text="${usuarioEmail}">laura@novatech.com</p>
+                </div>
+            </div>
+            <div class="text-slate-400 group-hover:text-slate-200 transition pr-1">
+                <i class="fa-solid fa-chevron-up text-xs"></i>
+            </div>
+        </button>
+    </div>
+</aside>
