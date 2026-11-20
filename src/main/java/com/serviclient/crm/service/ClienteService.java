@@ -109,6 +109,15 @@ public class ClienteService implements IClienteService {
   public Page<Cliente> listarClientes(
       Long empresaId, String busqueda, EstadoCliente estado, Pageable pageable) {
     Page<Cliente> page = clienteRepository.buscarConFiltros(empresaId, busqueda, pageable);
+
+    // Obtener el promedio real de encuestas de cada cliente.
+    for (Cliente cliente : page.getContent()) {
+
+      Double promedio = encuestaCsatRepository.findAverageScoreByClienteId(cliente.getId());
+
+      cliente.setCsatPromedio(promedio != null ? promedio : 0.0);
+    }
+
     if (estado != null) {
       List<Cliente> filtered =
           page.getContent().stream()

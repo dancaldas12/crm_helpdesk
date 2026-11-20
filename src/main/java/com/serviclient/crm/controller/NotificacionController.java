@@ -63,6 +63,9 @@ public class NotificacionController {
               ? "redirect:/renovaciones"
               : "redirect:/dashboard";
 
+      case "NEGOCIACION" ->
+          usuario.getRol() == Rol.ADMIN ? "redirect:/renovaciones" : "redirect:/dashboard";
+
       default -> "redirect:/dashboard";
     };
   }

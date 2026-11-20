@@ -8,6 +8,7 @@ import com.serviclient.crm.entity.enums.EstadoRenovacion;
 import com.serviclient.crm.service.IRenovacionService;
 import com.serviclient.crm.service.IRenovacionService.MetricasRenovaciones;
 import com.serviclient.crm.service.IUsuarioService;
+import com.serviclient.crm.service.NegociacionRenovacionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -17,6 +18,7 @@ import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -56,6 +58,7 @@ public class RenovacionController {
 
   private final IRenovacionService renovacionService;
   private final IUsuarioService usuarioService;
+  private final NegociacionRenovacionService negociacionRenovacionService;
 
   /**
    * Muestra el panel de renovaciones con métricas, listado de renovaciones próximas a vencer y el
@@ -99,6 +102,8 @@ public class RenovacionController {
     model.addAttribute("nuevoSeguimiento", new TicketMensajeDto.RegistrarSeguimientoRenovacion());
     model.addAttribute("fechaHoy", LocalDate.now());
     model.addAttribute("activeMenu", "renovaciones");
+    model.addAttribute(
+        "puedeNegociar", userDetails.getRol() == com.serviclient.crm.entity.enums.Rol.ADMIN);
 
     return "renovaciones/index";
   }
@@ -159,6 +164,59 @@ public class RenovacionController {
 
       redirectAttributes.addFlashAttribute(
           "errorMessage", "Error al guardar seguimiento: " + ex.getMessage());
+    }
+
+    return "redirect:/renovaciones";
+  }
+
+  @PostMapping("/{id}/propuesta")
+  public String enviarPropuesta(
+      @PathVariable Long id,
+      @AuthenticationPrincipal CustomUserDetails userDetails,
+      @RequestParam("nuevaFecha") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate nuevaFecha,
+      @RequestParam(value = "mensaje", required = false) String mensaje,
+      RedirectAttributes flash) {
+
+    resolverEmpresaId(userDetails);
+
+    try {
+      Usuario administrador =
+          usuarioService
+              .obtenerUsuarioAutenticado()
+              .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
+
+      negociacionRenovacionService.enviarPropuesta(id, administrador, nuevaFecha, mensaje);
+
+      flash.addFlashAttribute("successMessage", "Propuesta enviada al cliente.");
+
+    } catch (RuntimeException ex) {
+      flash.addFlashAttribute("errorMessage", ex.getMessage());
+    }
+
+    return "redirect:/renovaciones";
+  }
+
+  @PostMapping("/{id}/aceptar-contraoferta")
+  public String aceptarContraoferta(
+      @PathVariable Long id,
+      @AuthenticationPrincipal CustomUserDetails userDetails,
+      RedirectAttributes flash) {
+
+    resolverEmpresaId(userDetails);
+
+    try {
+      Usuario administrador =
+          usuarioService
+              .obtenerUsuarioAutenticado()
+              .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
+
+      negociacionRenovacionService.aceptarContraoferta(id, administrador);
+
+      flash.addFlashAttribute("successMessage", "Contraoferta aceptada. Contrato renovado.");
+
+    } catch (RuntimeException ex) {
+      flash.addFlashAttribute("errorMessage", ex.getMessage());
     }
 
     return "redirect:/renovaciones";

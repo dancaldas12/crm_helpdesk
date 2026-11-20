@@ -1,6 +1,7 @@
 package com.serviclient.crm.entity;
 
 import com.serviclient.crm.entity.enums.EstadoCliente;
+import com.serviclient.crm.entity.enums.EstadoRenovacion;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -11,10 +12,10 @@ import lombok.*;
 
 /**
  * Entidad JPA que representa una empresa cliente (cuenta B2B) dentro del modelo multi-tenant.
- * <p>
- * Almacena datos comerciales, fiscales (RUC), ejecutivos asignados, métricas algorítmicas de retención
- * (Health Score, promedio CSAT) y relaciones con contactos, servicios suscritos y renovaciones.
- * </p>
+ *
+ * <p>Almacena datos comerciales, fiscales (RUC), ejecutivos asignados, métricas algorítmicas de
+ * retención (Health Score, promedio CSAT) y relaciones con contactos, servicios suscritos y
+ * renovaciones.
  *
  * @author ServiClient Dev Team
  * @version 1.0.0
@@ -112,7 +113,7 @@ public class Cliente {
   private List<Interaccion> interacciones = new ArrayList<>();
 
   @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL, orphanRemoval = true)
-  @OrderBy("fechaCalculo DESC")
+  @OrderBy("fechaCalculo DESC, id DESC")
   @Builder.Default
   private List<HealthScoreHistorial> healthScoreHistorial = new ArrayList<>();
 
@@ -199,13 +200,35 @@ public class Cliente {
   }
 
   public LocalDate getFechaRenovacion() {
-    if (fechaRenovacionTransient != null) return fechaRenovacionTransient;
-    if (renovaciones != null && !renovaciones.isEmpty()) {
-      return renovaciones.get(0).getFechaVencimiento();
+
+    if (fechaRenovacionTransient != null) {
+      return fechaRenovacionTransient;
     }
+
+    // Priorizar el próximo ciclo contractual pendiente.
+    if (renovaciones != null && !renovaciones.isEmpty()) {
+
+      LocalDate proxima =
+          renovaciones.stream()
+              .filter(r ->
+                  r.getEstado() == EstadoRenovacion.PENDIENTE
+                      || r.getEstado() == EstadoRenovacion.EN_NEGOCIACION)
+              .map(Renovacion::getFechaVencimiento)
+              .filter(java.util.Objects::nonNull)
+              .min(LocalDate::compareTo)
+              .orElse(null);
+
+      if (proxima != null) {
+        return proxima;
+      }
+    }
+
+    // Si todavía no existe renovación, usar el servicio.
     if (servicios != null && !servicios.isEmpty() && servicios.get(0).getFechaFin() != null) {
+
       return servicios.get(0).getFechaFin();
     }
+
     return LocalDate.now().plusMonths(6);
   }
 

@@ -5,13 +5,19 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.serviclient.crm.entity.Cliente;
+import com.serviclient.crm.entity.ClienteServicio;
 import com.serviclient.crm.entity.Empresa;
+import com.serviclient.crm.entity.Renovacion;
 import com.serviclient.crm.entity.enums.EstadoCliente;
+import com.serviclient.crm.entity.enums.EstadoRenovacion;
+import com.serviclient.crm.entity.enums.EstadoServicioCliente;
 import com.serviclient.crm.entity.enums.EstadoTicket;
 import com.serviclient.crm.entity.enums.PrioridadTicket;
 import com.serviclient.crm.repository.ClienteRepository;
+import com.serviclient.crm.repository.ClienteServicioRepository;
 import com.serviclient.crm.repository.EncuestaCsatRepository;
 import com.serviclient.crm.repository.HealthScoreHistorialRepository;
+import com.serviclient.crm.repository.RenovacionRepository;
 import com.serviclient.crm.repository.TicketRepository;
 import com.serviclient.crm.service.HealthScoreService;
 import com.serviclient.crm.service.NotificacionService;
@@ -37,6 +43,9 @@ class HealthScoreServiceTest {
 
   @InjectMocks private HealthScoreService healthScoreService;
   @Mock private NotificacionService notificacionService;
+  @Mock private RenovacionRepository renovacionRepository;
+
+  @Mock private ClienteServicioRepository clienteServicioRepository;
 
   private Empresa empresa;
   private Cliente cliente;
@@ -100,5 +109,53 @@ class HealthScoreServiceTest {
     // Sin tickets abiertos, críticos ni respuestas CSAT:
     // El cliente conserva el puntaje base de 100.
     assertEquals(100, score);
+  }
+
+  @Test
+  void testRenovacionVencidaPenalizaHealthScore() {
+
+    Renovacion renovacion =
+        Renovacion.builder()
+            .estado(EstadoRenovacion.PENDIENTE)
+            .fechaVencimiento(LocalDate.now().minusDays(5))
+            .build();
+
+    when(renovacionRepository.findByClienteId(10L)).thenReturn(List.of(renovacion));
+
+    int score = healthScoreService.recalcularYActualizarHealthScore(cliente);
+
+    assertEquals(60, score);
+  }
+
+  @Test
+  void testRenovacionCompletadaNoPenaliza() {
+
+    Renovacion renovacion =
+        Renovacion.builder()
+            .estado(EstadoRenovacion.RENOVADO)
+            .fechaVencimiento(LocalDate.now().minusDays(5))
+            .build();
+
+    when(renovacionRepository.findByClienteId(10L)).thenReturn(List.of(renovacion));
+
+    int score = healthScoreService.recalcularYActualizarHealthScore(cliente);
+
+    assertEquals(100, score);
+  }
+
+  @Test
+  void testServicioVencidoSinRenovacionPenaliza() {
+
+    ClienteServicio servicio =
+        ClienteServicio.builder()
+            .estado(EstadoServicioCliente.ACTIVO)
+            .fechaFin(LocalDate.now().minusDays(2))
+            .build();
+
+    when(clienteServicioRepository.findByClienteId(10L)).thenReturn(List.of(servicio));
+
+    int score = healthScoreService.recalcularYActualizarHealthScore(cliente);
+
+    assertEquals(60, score);
   }
 }

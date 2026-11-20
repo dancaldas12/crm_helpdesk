@@ -1,18 +1,27 @@
 package com.serviclient.crm.service;
 
 import com.serviclient.crm.entity.Cliente;
+import com.serviclient.crm.entity.ClienteServicio;
 import com.serviclient.crm.entity.HealthScoreHistorial;
+import com.serviclient.crm.entity.Renovacion;
+import com.serviclient.crm.entity.enums.EstadoRenovacion;
 import com.serviclient.crm.entity.enums.EstadoSaludCliente;
+import com.serviclient.crm.entity.enums.EstadoServicioCliente;
 import com.serviclient.crm.entity.enums.EstadoTicket;
 import com.serviclient.crm.entity.enums.PrioridadTicket;
 import com.serviclient.crm.repository.ClienteRepository;
+import com.serviclient.crm.repository.ClienteServicioRepository;
 import com.serviclient.crm.repository.EncuestaCsatRepository;
 import com.serviclient.crm.repository.HealthScoreHistorialRepository;
+import com.serviclient.crm.repository.RenovacionRepository;
 import com.serviclient.crm.repository.TicketRepository;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +51,8 @@ public class HealthScoreService implements IHealthScoreService {
   private final EncuestaCsatRepository encuestaCsatRepository;
   private final HealthScoreHistorialRepository healthScoreHistorialRepository;
   private final NotificacionService notificacionService;
+  private final RenovacionRepository renovacionRepository;
+  private final ClienteServicioRepository clienteServicioRepository;
 
   /**
    * Representa un factor cualitativo y cuantitativo que influye en la calificación del Health
@@ -104,6 +115,11 @@ public class HealthScoreService implements IHealthScoreService {
       }
     }
 
+    // 4. Penalización por renovaciones pendientes o vencidas.
+    int penalizacionRenovacion = calcularPenalizacionRenovacion(cliente);
+
+    puntaje -= penalizacionRenovacion;
+
     // Normalizar entre 0 y 100
     puntaje = Math.max(0, Math.min(100, puntaje));
 
@@ -121,7 +137,18 @@ public class HealthScoreService implements IHealthScoreService {
             .fechaCalculo(LocalDateTime.now())
             .build();
 
-    healthScoreHistorialRepository.save(historial);
+    final int puntajeFinal = puntaje;
+
+    boolean puntajeCambio =
+        healthScoreHistorialRepository
+            .findFirstByClienteIdOrderByFechaCalculoDesc(cliente.getId())
+            .map(anterior -> anterior.getPuntaje().intValue() != puntajeFinal)
+            .orElse(true);
+
+    if (puntajeCambio) {
+      healthScoreHistorialRepository.save(historial);
+    }
+
     cliente.setHealthScore(puntaje);
     clienteRepository.save(cliente);
 
@@ -160,5 +187,60 @@ public class HealthScoreService implements IHealthScoreService {
     }
 
     return factores;
+  }
+
+  private int calcularPenalizacionRenovacion(Cliente cliente) {
+
+    LocalDate hoy = LocalDate.now();
+
+    // Primera fuente: renovaciones formalmente registradas.
+    List<Renovacion> renovaciones = renovacionRepository.findByClienteId(cliente.getId());
+
+    if (renovaciones != null && !renovaciones.isEmpty()) {
+
+      return renovaciones.stream()
+          .filter(r ->
+              r.getEstado() == EstadoRenovacion.PENDIENTE
+                  || r.getEstado() == EstadoRenovacion.EN_NEGOCIACION)
+          .map(Renovacion::getFechaVencimiento)
+          .filter(Objects::nonNull)
+          .mapToInt(fecha -> penalizacionPorFecha(fecha, hoy))
+          .max()
+          .orElse(0);
+    }
+
+    // Segunda fuente: servicios que aún no tienen renovación.
+    List<ClienteServicio> servicios = clienteServicioRepository.findByClienteId(cliente.getId());
+
+    if (servicios == null) {
+      return 0;
+    }
+
+    return servicios.stream()
+        .filter(s -> s.getEstado() == EstadoServicioCliente.ACTIVO)
+        .map(ClienteServicio::getFechaFin)
+        .filter(Objects::nonNull)
+        .mapToInt(fecha -> penalizacionPorFecha(fecha, hoy))
+        .max()
+        .orElse(0);
+  }
+
+  private int penalizacionPorFecha(LocalDate vencimiento, LocalDate hoy) {
+
+    long dias = ChronoUnit.DAYS.between(hoy, vencimiento);
+
+    if (dias < 0) {
+      return 40;
+    }
+
+    if (dias <= 7) {
+      return 15;
+    }
+
+    if (dias <= 30) {
+      return 5;
+    }
+
+    return 0;
   }
 }

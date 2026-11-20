@@ -1,0 +1,62 @@
+<div xmlns:th="http://www.thymeleaf.org" th:fragment="modalPropuesta" id="modalPropuesta" class="modal-overlay">
+
+    <div class="modal-card" style="max-width: 520px;">
+
+        <div class="modal-header">
+            <div class="modal-title">Gestionar propuesta de renovación</div>
+            <button type="button" class="modal-close-btn" data-modal-close>&times;</button>
+        </div>
+
+        <div class="modal-body">
+
+            <h4 id="propuestaNombreCliente" style="font-weight: 700; margin-bottom: 8px;"></h4>
+
+            <p id="propuestaEstadoActual" style="font-size: 13px; color: #64748b;
+                      margin-bottom: 18px;"></p>
+
+            <!-- Enviar o modificar propuesta -->
+            <form id="formPropuesta" th:action="@{/renovaciones/0/propuesta}" method="post">
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Nueva fecha de vencimiento
+                    </label>
+
+                    <input id="propuestaNuevaFecha" type="date" name="nuevaFecha" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Mensaje para el cliente
+                    </label>
+
+                    <textarea id="propuestaMensaje" name="mensaje" rows="3" class="form-textarea"
+                        placeholder="Describe las condiciones de la propuesta..."></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-modal-close>Cancelar</button>
+
+                    <button type="submit" class="btn btn-primary">
+                        Enviar propuesta
+                    </button>
+                </div>
+            </form>
+
+            <!-- Solo se muestra cuando el cliente envió una contraoferta -->
+            <form id="formAceptarContraoferta" th:action="@{/renovaciones/0/aceptar-contraoferta}" method="post" style="display: none; margin-top: 16px;
+                         padding-top: 16px;
+                         border-top: 1px solid #e2e8f0;">
+
+                <p style="font-size: 13px; margin-bottom: 12px;">
+                    ¿Deseas aceptar la fecha propuesta por el cliente?
+                </p>
+
+                <button type="submit" class="btn btn-primary">
+                    Aceptar contraoferta y renovar
+                </button>
+            </form>
+
+        </div>
+    </div>
+</div>

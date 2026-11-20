@@ -1,5 +1,6 @@
 package com.serviclient.crm.service;
 
+import com.serviclient.crm.entity.Cliente;
 import com.serviclient.crm.entity.Empresa;
 import com.serviclient.crm.entity.Renovacion;
 import com.serviclient.crm.entity.Ticket;
@@ -8,6 +9,7 @@ import com.serviclient.crm.entity.enums.EstadoRenovacion;
 import com.serviclient.crm.entity.enums.EstadoTicket;
 import com.serviclient.crm.entity.enums.Rol;
 import com.serviclient.crm.entity.enums.TipoNotificacion;
+import com.serviclient.crm.repository.ClienteRepository;
 import com.serviclient.crm.repository.EmpresaRepository;
 import com.serviclient.crm.repository.RenovacionRepository;
 import com.serviclient.crm.repository.TicketRepository;
@@ -26,6 +28,8 @@ public class AlertaProgramadaService {
   private final RenovacionRepository renovacionRepository;
   private final TicketRepository ticketRepository;
   private final NotificacionService notificacionService;
+  private final ClienteRepository clienteRepository;
+  private final HealthScoreService healthScoreService;
 
   // Primera revisión a los 30 segundos.
   // Después, cada 5 minutos.
@@ -115,6 +119,21 @@ public class AlertaProgramadaService {
             "SLA incumplido: " + ticket.getNumeroTicket(),
             "El ticket " + ticket.getNumeroTicket() + " superó su plazo de resolución.",
             ticket.getAgente());
+      }
+    }
+  }
+
+  @Scheduled(initialDelay = 60000, fixedDelay = 86400000)
+  @Transactional
+  public void actualizarHealthScoreClientes() {
+
+    // Ejecutar una primera revisión después del arranque
+    // y repetirla cada 24 horas.
+    for (Empresa empresa : empresaRepository.findAll()) {
+
+      for (Cliente cliente : clienteRepository.findByEmpresaId(empresa.getId())) {
+
+        healthScoreService.recalcularYActualizarHealthScore(cliente);
       }
     }
   }
