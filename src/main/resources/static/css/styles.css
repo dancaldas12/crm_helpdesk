@@ -1832,3 +1832,127 @@ body {
         margin-bottom: 12px;
     }
 }
+
+/* Campana de notificaciones */
+.notificaciones-panel > summary {
+    color: var(--color-text-muted);
+    border-radius: 10px;
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease;
+}
+
+/* Hover y estado abierto */
+.notificaciones-panel > summary:hover,
+.notificaciones-panel[open] > summary {
+    color: #4f46e5;
+    background-color: #eef2ff;
+}
+
+/* Accesibilidad con teclado */
+.notificaciones-panel > summary:focus-visible {
+    outline: 2px solid #4f46e5;
+    outline-offset: 2px;
+}
+
+.notificaciones-panel > summary::-webkit-details-marker {
+    display: none;
+}
+
+/* =====================================
+   NOTIFICACIONES DEL ENCABEZADO
+   ===================================== */
+
+.notificacion-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background-color 0.2s ease;
+}
+
+.notificacion-item:hover {
+    background-color: #f8fafc;
+}
+
+.notificacion-item:last-child {
+    border-bottom: none;
+}
+
+/* Icono reutilizable */
+.notificacion-icono {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background-color: #eff6ff;
+    color: #2563eb;
+}
+
+/* Riesgos y alertas críticas */
+.notificacion-icono:is(.CLIENTE_EN_RIESGO, .SLA_INCUMPLIDO) {
+    background-color: #fef2f2;
+    color: #dc2626;
+}
+
+/* Vencimientos y satisfacción baja */
+.notificacion-icono:is(.RENOVACION_PROXIMA, .SLA_PROXIMO_VENCER, .CSAT_BAJO) {
+    background-color: #fffbeb;
+    color: #d97706;
+}
+
+/* Tickets */
+.notificacion-icono:is(.TICKET_ASIGNADO, .TICKET_ACTUALIZADO) {
+    background-color: #eff6ff;
+    color: #2563eb;
+}
+
+/* Contenido */
+.notificacion-contenido {
+    flex: 1;
+    min-width: 0;
+}
+
+.notificacion-titulo {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 5px;
+}
+
+.notificacion-mensaje {
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.5;
+    margin: 0 0 8px;
+}
+
+.notificacion-fecha {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+/* Notificaciones completamente clicables */
+.notificacion-item {
+    position: relative;
+}
+
+.notificacion-abrir {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.notificacion-item:focus-within {
+    outline: 2px solid #6366f1;
+    outline-offset: -2px;
+}

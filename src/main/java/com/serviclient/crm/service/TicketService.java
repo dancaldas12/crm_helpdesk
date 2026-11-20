@@ -1,5 +1,13 @@
 package com.serviclient.crm.service;
 
+import com.serviclient.crm.dto.PortalTicketDto;
+import com.serviclient.crm.dto.TicketDto;
+import com.serviclient.crm.entity.*;
+import com.serviclient.crm.entity.enums.CategoriaTicket;
+import com.serviclient.crm.entity.enums.EstadoEncuestaCsat;
+import com.serviclient.crm.entity.enums.EstadoTicket;
+import com.serviclient.crm.entity.enums.PrioridadTicket;
+import com.serviclient.crm.entity.enums.TipoMensajeTicket;
 import com.serviclient.crm.repository.CategoriaTicketRepository;
 import com.serviclient.crm.repository.ClienteRepository;
 import com.serviclient.crm.repository.ConfiguracionSlaRepository;
@@ -11,51 +19,34 @@ import com.serviclient.crm.repository.TicketHistorialRepository;
 import com.serviclient.crm.repository.TicketMensajeRepository;
 import com.serviclient.crm.repository.TicketRepository;
 import com.serviclient.crm.repository.UsuarioRepository;
-import com.serviclient.crm.dto.TicketDto;
-import com.serviclient.crm.entity.*;
-import com.serviclient.crm.entity.enums.CategoriaTicket;
-import com.serviclient.crm.entity.enums.EstadoEncuestaCsat;
-import com.serviclient.crm.entity.enums.EstadoTicket;
-import com.serviclient.crm.entity.enums.PrioridadTicket;
-import com.serviclient.crm.entity.enums.TipoMensajeTicket;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Random;
-import lombok.Builder;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import com.serviclient.crm.dto.PortalTicketDto;
 
 /**
  * Servicio de lógica de negocio para la Mesa de Ayuda (Helpdesk).
  *
- * <p>
- * Centraliza todas las operaciones del ciclo de vida de un ticket: creación con
- * cálculo de SLA,
- * mensajería, asignación de agentes, cambios de estado/prioridad, cierre con
- * CSAT y auditoría
+ * <p>Centraliza todas las operaciones del ciclo de vida de un ticket: creación con cálculo de SLA,
+ * mensajería, asignación de agentes, cambios de estado/prioridad, cierre con CSAT y auditoría
  * automática.
  *
- * <p>
- * <b>Invariantes de negocio aplicadas:</b>
+ * <p><b>Invariantes de negocio aplicadas:</b>
  *
  * <ul>
- * <li>El número de ticket se genera automáticamente ({@code TK-XXXX}).
- * <li>Los límites de SLA se calculan al crear el ticket según la {@link
- * com.serviclient.crm.entity.ConfiguracionSla} de la empresa.
- * <li>La primera respuesta solo se registra una vez.
- * <li>Al cerrar un ticket se puede generar automáticamente una {@link
- * com.serviclient.crm.entity.EncuestaCsat} pendiente.
- * <li>Cada acción relevante se persiste en
- * {@link com.serviclient.crm.entity.TicketHistorial}.
+ *   <li>El número de ticket se genera automáticamente ({@code TK-XXXX}).
+ *   <li>Los límites de SLA se calculan al crear el ticket según la {@link
+ *       com.serviclient.crm.entity.ConfiguracionSla} de la empresa.
+ *   <li>La primera respuesta solo se registra una vez.
+ *   <li>Al cerrar un ticket se puede generar automáticamente una {@link
+ *       com.serviclient.crm.entity.EncuestaCsat} pendiente.
+ *   <li>Cada acción relevante se persiste en {@link com.serviclient.crm.entity.TicketHistorial}.
  * </ul>
  *
  * @author ServiClient Dev Team
@@ -81,10 +72,10 @@ public class TicketService implements ITicketService {
   private final ConfiguracionSlaRepository configuracionSlaRepository;
   private final EmpresaService empresaService;
   private final HealthScoreService healthScoreService;
+  private final NotificacionService notificacionService;
 
   /**
-   * Calcula y retorna las métricas actuales de la mesa de ayuda para la empresa
-   * indicada.
+   * Calcula y retorna las métricas actuales de la mesa de ayuda para la empresa indicada.
    *
    * @param empresaId identificador de la empresa
    * @return {@link MetricasTickets} con conteos en tiempo real
@@ -93,7 +84,8 @@ public class TicketService implements ITicketService {
   public MetricasTickets obtenerMetricas(Long empresaId) {
     long abiertos = ticketRepository.countByEmpresaIdAndEstado(empresaId, EstadoTicket.ABIERTO);
     long enProceso = ticketRepository.countByEmpresaIdAndEstado(empresaId, EstadoTicket.EN_PROCESO);
-    long criticos = ticketRepository.countByEmpresaIdAndPrioridad(empresaId, PrioridadTicket.CRITICA);
+    long criticos =
+        ticketRepository.countByEmpresaIdAndPrioridad(empresaId, PrioridadTicket.CRITICA);
     long pendientes = ticketRepository.countByEmpresaIdAndEstado(empresaId, EstadoTicket.PENDIENTE);
     long fueraDeSla = ticketRepository.countTicketsFueraDeSla(empresaId, LocalDateTime.now());
 
@@ -107,19 +99,15 @@ public class TicketService implements ITicketService {
   }
 
   /**
-   * Lista tickets de una empresa aplicando filtros opcionales de búsqueda,
-   * estado, prioridad y
+   * Lista tickets de una empresa aplicando filtros opcionales de búsqueda, estado, prioridad y
    * categoría. La páginación es manejada por el repositorio.
    *
    * @param empresaId identificador de la empresa
-   * @param busqueda  término libre de búsqueda (número de ticket o asunto); puede
-   *                  ser {@code null}
-   * @param estado    filtro de estado; puede ser {@code null} para todos los
-   *                  estados
+   * @param busqueda término libre de búsqueda (número de ticket o asunto); puede ser {@code null}
+   * @param estado filtro de estado; puede ser {@code null} para todos los estados
    * @param prioridad filtro de prioridad; puede ser {@code null}
-   * @param categoria filtro de categoría aplicado en memoria; puede ser
-   *                  {@code null}
-   * @param pageable  configuración de página y ordenamiento
+   * @param categoria filtro de categoría aplicado en memoria; puede ser {@code null}
+   * @param pageable configuración de página y ordenamiento
    * @return página de tickets que cumplen los criterios
    */
   @Transactional(readOnly = true)
@@ -130,7 +118,8 @@ public class TicketService implements ITicketService {
       PrioridadTicket prioridad,
       CategoriaTicket categoria,
       Pageable pageable) {
-    return ticketRepository.buscarConFiltros(empresaId, busqueda, estado, prioridad, categoria, pageable);
+    return ticketRepository.buscarConFiltros(
+        empresaId, busqueda, estado, prioridad, categoria, pageable);
   }
 
   /**
@@ -138,8 +127,7 @@ public class TicketService implements ITicketService {
    *
    * @param id identificador del ticket
    * @return entidad {@link com.serviclient.crm.entity.Ticket} encontrada
-   * @throws IllegalArgumentException si no existe un ticket con el {@code id}
-   *                                  indicado
+   * @throws IllegalArgumentException si no existe un ticket con el {@code id} indicado
    */
   @Transactional(readOnly = true)
   public Ticket obtenerPorId(Long id) {
@@ -152,12 +140,11 @@ public class TicketService implements ITicketService {
   public Ticket obtenerPorIdYEmpresa(Long id, Long empresaId) {
     return ticketRepository
         .findByIdAndEmpresaId(id, empresaId)
-        .orElseThrow(
-            () -> {
-              log.warn("Acceso rechazado a ticket. ticketId={}, empresaId={}", id, empresaId);
+        .orElseThrow(() -> {
+          log.warn("Acceso rechazado a ticket. ticketId={}, empresaId={}", id, empresaId);
 
-              return new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket no encontrado.");
-            });
+          return new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket no encontrado.");
+        });
   }
 
   /**
@@ -165,8 +152,7 @@ public class TicketService implements ITicketService {
    *
    * @param codigo código único del ticket
    * @return entidad {@link com.serviclient.crm.entity.Ticket} encontrada
-   * @throws IllegalArgumentException si no existe un ticket con el código
-   *                                  indicado
+   * @throws IllegalArgumentException si no existe un ticket con el código indicado
    */
   @Transactional(readOnly = true)
   public Ticket obtenerPorCodigo(String codigo) {
@@ -177,33 +163,32 @@ public class TicketService implements ITicketService {
   }
 
   /**
-   * Crea un nuevo ticket con cálculo automático de límites de SLA. Persiste el
-   * mensaje inicial, el
+   * Crea un nuevo ticket con cálculo automático de límites de SLA. Persiste el mensaje inicial, el
    * historial de creación y notifica al agente asignado.
    *
    * @param empresaId identificador de la empresa que crea el ticket
-   * @param dto       datos del nuevo ticket (cliente, asunto, prioridad, agente,
-   *                  etc.)
-   * @param autor     usuario autenticado que crea el ticket
-   * @return entidad {@link com.serviclient.crm.entity.Ticket} persistida con
-   *         número auto-generado
+   * @param dto datos del nuevo ticket (cliente, asunto, prioridad, agente, etc.)
+   * @param autor usuario autenticado que crea el ticket
+   * @return entidad {@link com.serviclient.crm.entity.Ticket} persistida con número auto-generado
    * @throws IllegalArgumentException si el cliente o la empresa no existen
    */
   @Transactional
   public Ticket crearTicket(Long empresaId, TicketDto dto, Usuario autor) {
     Empresa empresa = empresaService.obtenerPorId(empresaId);
-    Cliente cliente = clienteRepository
-        .findById(dto.getClienteId())
-        .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado"));
+    Cliente cliente =
+        clienteRepository
+            .findById(dto.getClienteId())
+            .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado"));
     if (cliente.getEmpresa() == null || !empresaId.equals(cliente.getEmpresa().getId())) {
       throw new IllegalArgumentException("El cliente no pertenece a la empresa actual.");
     }
 
     Contacto contacto = null;
     if (dto.getContactoId() != null) {
-      contacto = contactoRepository
-          .findById(dto.getContactoId())
-          .orElseThrow(() -> new IllegalArgumentException("Contacto no encontrado"));
+      contacto =
+          contactoRepository
+              .findById(dto.getContactoId())
+              .orElseThrow(() -> new IllegalArgumentException("Contacto no encontrado"));
 
       if (contacto.getCliente() == null || !contacto.getCliente().getId().equals(cliente.getId())) {
         throw new IllegalArgumentException("El contacto no pertenece al cliente seleccionado.");
@@ -214,9 +199,10 @@ public class TicketService implements ITicketService {
 
     Usuario agente = null;
     if (dto.getAgenteId() != null) {
-      agente = usuarioRepository
-          .findById(dto.getAgenteId())
-          .orElseThrow(() -> new IllegalArgumentException("Agente no encontrado"));
+      agente =
+          usuarioRepository
+              .findById(dto.getAgenteId())
+              .orElseThrow(() -> new IllegalArgumentException("Agente no encontrado"));
 
       if (agente.getEmpresa() == null || !empresaId.equals(agente.getEmpresa().getId())) {
         throw new IllegalArgumentException("El agente no pertenece a la empresa actual.");
@@ -227,20 +213,23 @@ public class TicketService implements ITicketService {
     String numeroTicket = "TK-" + (4000 + new Random().nextInt(5000));
 
     // Obtener o crear Categoría
-    String catNombre = dto.getCategoria() != null ? dto.getCategoria().getEtiqueta() : "Soporte Técnico";
-    CategoriaTicketEntity categoriaEntity = categoriaTicketRepository
-        .findByEmpresaIdAndNombre(empresaId, catNombre)
-        .orElseGet(
-            () -> categoriaTicketRepository.save(
-                CategoriaTicketEntity.builder()
-                    .empresa(empresa)
-                    .nombre(catNombre)
-                    .descripcion("Categoría " + catNombre)
-                    .estado("ACTIVO")
-                    .build()));
+    String catNombre =
+        dto.getCategoria() != null ? dto.getCategoria().getEtiqueta() : "Soporte Técnico";
+    CategoriaTicketEntity categoriaEntity =
+        categoriaTicketRepository
+            .findByEmpresaIdAndNombre(empresaId, catNombre)
+            .orElseGet(() ->
+                categoriaTicketRepository.save(
+                    CategoriaTicketEntity.builder()
+                        .empresa(empresa)
+                        .nombre(catNombre)
+                        .descripcion("Categoría " + catNombre)
+                        .estado("ACTIVO")
+                        .build()));
 
     LocalDateTime ahora = LocalDateTime.now();
-    PrioridadTicket prioridad = dto.getPrioridad() != null ? dto.getPrioridad() : PrioridadTicket.MEDIA;
+    PrioridadTicket prioridad =
+        dto.getPrioridad() != null ? dto.getPrioridad() : PrioridadTicket.MEDIA;
 
     // SLA según configuración
     int minutosResp = 120;
@@ -251,21 +240,22 @@ public class TicketService implements ITicketService {
       minutosResol = slaConfig.get().getTiempoResolucionMinutos();
     }
 
-    Ticket ticket = Ticket.builder()
-        .numeroTicket(numeroTicket)
-        .empresa(empresa)
-        .cliente(cliente)
-        .contacto(contacto)
-        .categoriaEntity(categoriaEntity)
-        .agente(agente)
-        .asunto(dto.getAsunto())
-        .descripcion(dto.getDescripcion())
-        .prioridad(prioridad)
-        .estado(EstadoTicket.ABIERTO)
-        .createdAt(ahora)
-        .slaRespuestaLimite(ahora.plusMinutes(minutosResp))
-        .slaResolucionLimite(ahora.plusMinutes(minutosResol))
-        .build();
+    Ticket ticket =
+        Ticket.builder()
+            .numeroTicket(numeroTicket)
+            .empresa(empresa)
+            .cliente(cliente)
+            .contacto(contacto)
+            .categoriaEntity(categoriaEntity)
+            .agente(agente)
+            .asunto(dto.getAsunto())
+            .descripcion(dto.getDescripcion())
+            .prioridad(prioridad)
+            .estado(EstadoTicket.ABIERTO)
+            .createdAt(ahora)
+            .slaRespuestaLimite(ahora.plusMinutes(minutosResp))
+            .slaResolucionLimite(ahora.plusMinutes(minutosResol))
+            .build();
 
     Ticket guardado = ticketRepository.save(ticket);
     log.info(
@@ -279,29 +269,38 @@ public class TicketService implements ITicketService {
     }
 
     // Mensaje inicial en la conversación
-    String remitenteNombre = (contacto != null)
-        ? contacto.getNombreCompleto()
-        : (autor != null ? autor.getNombreCompleto() : "Cliente");
-    TicketMensaje mensajeInicial = TicketMensaje.builder()
-        .ticket(guardado)
-        .usuario(autor)
-        .contacto(contacto)
-        .tipo(autor != null ? TipoMensajeTicket.AGENTE : TipoMensajeTicket.CLIENTE)
-        .esInterno(false)
-        .mensaje(dto.getDescripcion())
-        .createdAt(ahora)
-        .build();
+    String remitenteNombre =
+        (contacto != null)
+            ? contacto.getNombreCompleto()
+            : (autor != null ? autor.getNombreCompleto() : "Cliente");
+    TicketMensaje mensajeInicial =
+        TicketMensaje.builder()
+            .ticket(guardado)
+            .usuario(autor)
+            .contacto(contacto)
+            .tipo(autor != null ? TipoMensajeTicket.AGENTE : TipoMensajeTicket.CLIENTE)
+            .esInterno(false)
+            .mensaje(dto.getDescripcion())
+            .createdAt(ahora)
+            .build();
     ticketMensajeRepository.save(mensajeInicial);
 
     // Registro de auditoría
-    TicketHistorial hist = TicketHistorial.builder()
-        .ticket(guardado)
-        .usuario(autor)
-        .tipoEvento("CREACION")
-        .descripcion("Ticket creado: " + dto.getAsunto())
-        .createdAt(ahora)
-        .build();
+    TicketHistorial hist =
+        TicketHistorial.builder()
+            .ticket(guardado)
+            .usuario(autor)
+            .tipoEvento("CREACION")
+            .descripcion("Ticket creado: " + dto.getAsunto())
+            .createdAt(ahora)
+            .build();
+
     ticketHistorialRepository.save(hist);
+
+    // Notificar si el ticket se creó con un agente asignado.
+    if (agente != null) {
+      notificacionService.notificarAsignacionTicket(guardado, agente);
+    }
 
     healthScoreService.recalcularYActualizarHealthScore(cliente);
     return guardado;
@@ -320,26 +319,28 @@ public class TicketService implements ITicketService {
       ticketRepository.save(ticket);
     }
 
-    TicketMensaje mensaje = TicketMensaje.builder()
-        .ticket(ticket)
-        .usuario(autor)
-        .tipo(TipoMensajeTicket.AGENTE)
-        .esInterno(esNotaInterna)
-        .mensaje(contenido)
-        .createdAt(ahora)
-        .build();
+    TicketMensaje mensaje =
+        TicketMensaje.builder()
+            .ticket(ticket)
+            .usuario(autor)
+            .tipo(TipoMensajeTicket.AGENTE)
+            .esInterno(esNotaInterna)
+            .mensaje(contenido)
+            .createdAt(ahora)
+            .build();
 
     TicketMensaje guardado = ticketMensajeRepository.save(mensaje);
 
     // Registro de historial si es mensaje público
     if (!esNotaInterna) {
-      TicketHistorial hist = TicketHistorial.builder()
-          .ticket(ticket)
-          .usuario(autor)
-          .tipoEvento("RESPUESTA")
-          .descripcion(contenido.length() > 60 ? contenido.substring(0, 57) + "..." : contenido)
-          .createdAt(ahora)
-          .build();
+      TicketHistorial hist =
+          TicketHistorial.builder()
+              .ticket(ticket)
+              .usuario(autor)
+              .tipoEvento("RESPUESTA")
+              .descripcion(contenido.length() > 60 ? contenido.substring(0, 57) + "..." : contenido)
+              .createdAt(ahora)
+              .build();
       ticketHistorialRepository.save(hist);
     }
 
@@ -348,23 +349,43 @@ public class TicketService implements ITicketService {
 
   @Transactional
   public void asignarAgente(Long ticketId, Long nuevoAgenteId, Usuario autor) {
-    Ticket ticket = obtenerPorId(ticketId);
-    Usuario nuevoAgente = usuarioRepository
-        .findById(nuevoAgenteId)
-        .orElseThrow(() -> new IllegalArgumentException("Agente no encontrado"));
 
+    Ticket ticket = obtenerPorId(ticketId);
+
+    Usuario nuevoAgente =
+        usuarioRepository
+            .findById(nuevoAgenteId)
+            .orElseThrow(() -> new IllegalArgumentException("Agente no encontrado"));
+
+    // Evitar asignar agentes de otra empresa.
+    if (!ticket.getEmpresa().getId().equals(nuevoAgente.getEmpresa().getId())) {
+      throw new IllegalArgumentException("El agente no pertenece a la empresa del ticket.");
+    }
+
+    // Evitar notificaciones si el agente no cambió.
+    if (ticket.getAgente() != null && ticket.getAgente().getId().equals(nuevoAgenteId)) {
+      return;
+    }
+
+    // Actualizar agente asignado.
     ticket.setAgente(nuevoAgente);
     ticketRepository.save(ticket);
 
-    TicketHistorial hist = TicketHistorial.builder()
-        .ticket(ticket)
-        .usuario(autor)
-        .tipoEvento("ASIGNACION")
-        .valorNuevo(nuevoAgente.getNombreCompleto())
-        .descripcion("Ticket asignado a " + nuevoAgente.getNombreCompleto())
-        .createdAt(LocalDateTime.now())
-        .build();
+    // Registrar historial.
+    TicketHistorial hist =
+        TicketHistorial.builder()
+            .ticket(ticket)
+            .usuario(autor)
+            .tipoEvento("ASIGNACION")
+            .valorNuevo(nuevoAgente.getNombreCompleto())
+            .descripcion("Ticket asignado a " + nuevoAgente.getNombreCompleto())
+            .createdAt(LocalDateTime.now())
+            .build();
+
     ticketHistorialRepository.save(hist);
+
+    // Generar notificaciones reales.
+    notificacionService.notificarAsignacionTicket(ticket, nuevoAgente);
   }
 
   @Transactional
@@ -377,48 +398,60 @@ public class TicketService implements ITicketService {
     Ticket ticket = obtenerPorId(ticketId);
     LocalDateTime ahora = LocalDateTime.now();
 
+    boolean huboCambios =
+        (nuevoEstado != null && nuevoEstado != ticket.getEstado())
+            || (nuevaPrioridad != null && nuevaPrioridad != ticket.getPrioridad());
+
     if (nuevoEstado != null && nuevoEstado != ticket.getEstado()) {
       String anterior = ticket.getEstado().getEtiqueta();
       ticket.setEstado(nuevoEstado);
       if (nuevoEstado == EstadoTicket.RESUELTO && ticket.getFechaResolucion() == null) {
         ticket.setFechaResolucion(ahora);
       }
-      TicketHistorial hist = TicketHistorial.builder()
-          .ticket(ticket)
-          .usuario(autor)
-          .tipoEvento("ESTADO")
-          .valorAnterior(anterior)
-          .valorNuevo(nuevoEstado.getEtiqueta())
-          .descripcion(
-              comentario != null && !comentario.isBlank()
-                  ? comentario
-                  : "Actualización manual de estado")
-          .createdAt(ahora)
-          .build();
+      TicketHistorial hist =
+          TicketHistorial.builder()
+              .ticket(ticket)
+              .usuario(autor)
+              .tipoEvento("ESTADO")
+              .valorAnterior(anterior)
+              .valorNuevo(nuevoEstado.getEtiqueta())
+              .descripcion(
+                  comentario != null && !comentario.isBlank()
+                      ? comentario
+                      : "Actualización manual de estado")
+              .createdAt(ahora)
+              .build();
       ticketHistorialRepository.save(hist);
     }
 
     if (nuevaPrioridad != null && nuevaPrioridad != ticket.getPrioridad()) {
       String anterior = ticket.getPrioridad().getEtiqueta();
       ticket.setPrioridad(nuevaPrioridad);
-      TicketHistorial hist = TicketHistorial.builder()
-          .ticket(ticket)
-          .usuario(autor)
-          .tipoEvento("PRIORIDAD")
-          .valorAnterior(anterior)
-          .valorNuevo(nuevaPrioridad.getEtiqueta())
-          .descripcion("Ajuste de prioridad")
-          .createdAt(ahora)
-          .build();
+      TicketHistorial hist =
+          TicketHistorial.builder()
+              .ticket(ticket)
+              .usuario(autor)
+              .tipoEvento("PRIORIDAD")
+              .valorAnterior(anterior)
+              .valorNuevo(nuevaPrioridad.getEtiqueta())
+              .descripcion("Ajuste de prioridad")
+              .createdAt(ahora)
+              .build();
       ticketHistorialRepository.save(hist);
     }
 
     ticketRepository.save(ticket);
+
+    if (huboCambios) {
+      notificacionService.notificarActualizacionTicket(ticket);
+    }
+
     healthScoreService.recalcularYActualizarHealthScore(ticket.getCliente());
   }
 
   @Transactional
-  public void cerrarTicket(Long ticketId, Boolean enviarCsat, String comentarioCierre, Usuario autor) {
+  public void cerrarTicket(
+      Long ticketId, Boolean enviarCsat, String comentarioCierre, Usuario autor) {
     Ticket ticket = obtenerPorId(ticketId);
     LocalDateTime ahora = LocalDateTime.now();
 
@@ -429,21 +462,26 @@ public class TicketService implements ITicketService {
     }
     ticketRepository.save(ticket);
 
-    TicketHistorial hist = TicketHistorial.builder()
-        .ticket(ticket)
-        .usuario(autor)
-        .tipoEvento("CIERRE")
-        .descripcion(Boolean.TRUE.equals(enviarCsat) ? "Cierre de ticket con encuesta CSAT" : "Cierre de ticket")
-        .createdAt(ahora)
-        .build();
+    TicketHistorial hist =
+        TicketHistorial.builder()
+            .ticket(ticket)
+            .usuario(autor)
+            .tipoEvento("CIERRE")
+            .descripcion(
+                Boolean.TRUE.equals(enviarCsat)
+                    ? "Cierre de ticket con encuesta CSAT"
+                    : "Cierre de ticket")
+            .createdAt(ahora)
+            .build();
     ticketHistorialRepository.save(hist);
 
     if (Boolean.TRUE.equals(enviarCsat)) {
 
-      java.util.Optional<EncuestaCsat> encuestaExistente = encuestaCsatRepository.findByTicketId(ticketId);
+      java.util.Optional<EncuestaCsat> encuestaExistente =
+          encuestaCsatRepository.findByTicketId(ticketId);
 
       if (encuestaExistente.isPresent()) {
-        
+
         EncuestaCsat encuesta = encuestaExistente.get();
         encuesta.setEstado(EstadoEncuestaCsat.PENDIENTE);
         encuesta.setFechaEnvio(ahora);
@@ -459,16 +497,17 @@ public class TicketService implements ITicketService {
         log.info("Encuesta CSAT reiniciada para el ticket {}", ticketId);
 
       } else {
-        EncuestaCsat nuevaEncuesta = EncuestaCsat.builder()
-            .empresa(ticket.getEmpresa())
-            .cliente(ticket.getCliente())
-            .contacto(ticket.getContacto())
-            .ticket(ticket)
-            .estado(EstadoEncuestaCsat.PENDIENTE)
-            .fechaEnvio(ahora)
-            .fechaRespuesta(null)
-            .activa(true)
-            .build();
+        EncuestaCsat nuevaEncuesta =
+            EncuestaCsat.builder()
+                .empresa(ticket.getEmpresa())
+                .cliente(ticket.getCliente())
+                .contacto(ticket.getContacto())
+                .ticket(ticket)
+                .estado(EstadoEncuestaCsat.PENDIENTE)
+                .fechaEnvio(ahora)
+                .fechaRespuesta(null)
+                .activa(true)
+                .build();
 
         encuestaCsatRepository.save(nuevaEncuesta);
         log.info("Nueva encuesta CSAT creada para el ticket {}", ticketId);
@@ -482,7 +521,8 @@ public class TicketService implements ITicketService {
   @Transactional
   public Ticket crearTicketDesdePortal(PortalTicketDto dto, CuentaPortal cuenta) {
     if (cuenta.getContacto() == null || cuenta.getContacto().getCliente() == null) {
-      throw new IllegalArgumentException("La cuenta del portal no tiene un contacto o cliente asociado.");
+      throw new IllegalArgumentException(
+          "La cuenta del portal no tiene un contacto o cliente asociado.");
     }
 
     Contacto contacto = cuenta.getContacto();
@@ -494,19 +534,23 @@ public class TicketService implements ITicketService {
     String numeroTicket = "TK-" + (4000 + new Random().nextInt(5000));
 
     // Obtener o crear Categoría en BD
-    String catNombre = dto.getCategoria() != null ? dto.getCategoria().getEtiqueta() : "Soporte Técnico";
-    CategoriaTicketEntity categoriaEntity = categoriaTicketRepository
-        .findByEmpresaIdAndNombre(empresaId, catNombre)
-        .orElseGet(() -> categoriaTicketRepository.save(
-            CategoriaTicketEntity.builder()
-                .empresa(empresa)
-                .nombre(catNombre)
-                .descripcion("Categoría " + catNombre)
-                .estado("ACTIVO")
-                .build()));
+    String catNombre =
+        dto.getCategoria() != null ? dto.getCategoria().getEtiqueta() : "Soporte Técnico";
+    CategoriaTicketEntity categoriaEntity =
+        categoriaTicketRepository
+            .findByEmpresaIdAndNombre(empresaId, catNombre)
+            .orElseGet(() ->
+                categoriaTicketRepository.save(
+                    CategoriaTicketEntity.builder()
+                        .empresa(empresa)
+                        .nombre(catNombre)
+                        .descripcion("Categoría " + catNombre)
+                        .estado("ACTIVO")
+                        .build()));
 
     LocalDateTime ahora = LocalDateTime.now();
-    PrioridadTicket prioridad = dto.getPrioridad() != null ? dto.getPrioridad() : PrioridadTicket.MEDIA;
+    PrioridadTicket prioridad =
+        dto.getPrioridad() != null ? dto.getPrioridad() : PrioridadTicket.MEDIA;
 
     // Calcular SLA según configuración de la empresa
     int minutosResp = 120;
@@ -518,48 +562,50 @@ public class TicketService implements ITicketService {
     }
 
     // Construir la entidad Ticket
-    Ticket ticket = Ticket.builder()
-        .numeroTicket(numeroTicket)
-        .empresa(empresa)
-        .cliente(cliente)
-        .contacto(contacto)
-        .categoriaEntity(categoriaEntity)
-        .agente(null)
-        .asunto(dto.getAsunto())
-        .descripcion(dto.getDescripcion())
-        .prioridad(prioridad)
-        .estado(EstadoTicket.ABIERTO)
-        .createdAt(ahora)
-        .slaRespuestaLimite(ahora.plusMinutes(minutosResp))
-        .slaResolucionLimite(ahora.plusMinutes(minutosResol))
-        .build();
+    Ticket ticket =
+        Ticket.builder()
+            .numeroTicket(numeroTicket)
+            .empresa(empresa)
+            .cliente(cliente)
+            .contacto(contacto)
+            .categoriaEntity(categoriaEntity)
+            .agente(null)
+            .asunto(dto.getAsunto())
+            .descripcion(dto.getDescripcion())
+            .prioridad(prioridad)
+            .estado(EstadoTicket.ABIERTO)
+            .createdAt(ahora)
+            .slaRespuestaLimite(ahora.plusMinutes(minutosResp))
+            .slaResolucionLimite(ahora.plusMinutes(minutosResol))
+            .build();
 
     Ticket guardado = ticketRepository.save(ticket);
 
     // Mensaje inicial del cliente
-    TicketMensaje mensajeInicial = TicketMensaje.builder()
-        .ticket(guardado)
-        .usuario(null)
-        .contacto(contacto)
-        .tipo(TipoMensajeTicket.CLIENTE)
-        .esInterno(false)
-        .mensaje(dto.getDescripcion())
-        .createdAt(ahora)
-        .build();
+    TicketMensaje mensajeInicial =
+        TicketMensaje.builder()
+            .ticket(guardado)
+            .usuario(null)
+            .contacto(contacto)
+            .tipo(TipoMensajeTicket.CLIENTE)
+            .esInterno(false)
+            .mensaje(dto.getDescripcion())
+            .createdAt(ahora)
+            .build();
     ticketMensajeRepository.save(mensajeInicial);
 
     // Historial
-    TicketHistorial hist = TicketHistorial.builder()
-        .ticket(guardado)
-        .usuario(null)
-        .tipoEvento("CREACION")
-        .descripcion("Ticket creado desde el Portal por: " + contacto.getNombreCompleto())
-        .createdAt(ahora)
-        .build();
+    TicketHistorial hist =
+        TicketHistorial.builder()
+            .ticket(guardado)
+            .usuario(null)
+            .tipoEvento("CREACION")
+            .descripcion("Ticket creado desde el Portal por: " + contacto.getNombreCompleto())
+            .createdAt(ahora)
+            .build();
     ticketHistorialRepository.save(hist);
 
     healthScoreService.recalcularYActualizarHealthScore(cliente);
     return guardado;
   }
-
 }
