@@ -41,6 +41,8 @@ class PortalTicketServiceTest {
 
   @InjectMocks private PortalTicketService portalTicketService;
 
+  @Mock private NotificacionService notificacionService;
+
   private Cliente cliente;
   private CuentaPortal cuenta;
   private EncuestaCsat encuesta;

@@ -50,14 +50,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 /**
  * Controlador MVC para la gestión de clientes B2B.
  *
- * <p>
- * Proporciona operaciones CRUD completas sobre la entidad {@link
- * com.serviclient.crm.entity.Cliente} y expone la vista 360° del cliente con
- * sus KPIs, historial de
+ * <p>Proporciona operaciones CRUD completas sobre la entidad {@link
+ * com.serviclient.crm.entity.Cliente} y expone la vista 360° del cliente con sus KPIs, historial de
  * tickets, encuestas CSAT, renovaciones e interacciones.
  *
- * <p>
- * <b>Rutas expuestas:</b>
+ * <p><b>Rutas expuestas:</b>
  *
  * <pre>
  * GET  /clientes                    → listado paginado con filtros y métricas
@@ -79,7 +76,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/clientes")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Clientes", description = "Gestión de clientes B2B: listado paginado, vista 360°, contactos, Health Score y exportación Excel")
+@Tag(
+    name = "Clientes",
+    description =
+        "Gestión de clientes B2B: listado paginado, vista 360°, contactos, Health Score y"
+            + " exportación Excel")
 public class ClienteController {
 
   private final IClienteService clienteService;
@@ -91,8 +92,11 @@ public class ClienteController {
   // LISTADO
   // ─────────────────────────────────────────────────────────────────────────
 
-  @Operation(summary = "Listar clientes", description = "Obtiene el listado paginado de clientes de la empresa activa con métricas de salud y"
-      + " filtros.")
+  @Operation(
+      summary = "Listar clientes",
+      description =
+          "Obtiene el listado paginado de clientes de la empresa activa con métricas de salud y"
+              + " filtros.")
   @GetMapping
   public String listarClientes(
       @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -104,7 +108,8 @@ public class ClienteController {
     Long empresaId = resolverEmpresaId(userDetails);
 
     Pageable pageable = PageRequest.of(page, size, Sort.by("nombreComercial").ascending());
-    Page<Cliente> clientesPage = clienteService.listarClientes(empresaId, busqueda, estado, pageable);
+    Page<Cliente> clientesPage =
+        clienteService.listarClientes(empresaId, busqueda, estado, pageable);
     MetricasClientes metricas = clienteService.obtenerMetricas(empresaId);
 
     model.addAttribute("clientesPage", clientesPage);
@@ -117,7 +122,10 @@ public class ClienteController {
     return "clientes/index";
   }
 
-  @Operation(summary = "Exportar clientes a Excel", description = "Descarga la lista de clientes en formato .xlsx aplicando los filtros actuales.")
+  @Operation(
+      summary = "Exportar clientes a Excel",
+      description =
+          "Descarga la lista de clientes en formato .xlsx aplicando los filtros actuales.")
   @GetMapping("/exportar")
   public ResponseEntity<byte[]> exportarClientesExcel(
       @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -216,8 +224,11 @@ public class ClienteController {
   // EDITAR
   // ─────────────────────────────────────────────────────────────────────────
 
-  @Operation(summary = "Formulario de edición de cliente", description = "Carga el formulario pre-relleno con los datos actuales del cliente para su"
-      + " modificación.")
+  @Operation(
+      summary = "Formulario de edición de cliente",
+      description =
+          "Carga el formulario pre-relleno con los datos actuales del cliente para su"
+              + " modificación.")
   @GetMapping("/{id}/editar")
   public String formularioEditarCliente(
       @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -236,7 +247,9 @@ public class ClienteController {
     return "clientes/form";
   }
 
-  @Operation(summary = "Actualizar cliente existente", description = "Valida y persiste los cambios realizados sobre un cliente existente.")
+  @Operation(
+      summary = "Actualizar cliente existente",
+      description = "Valida y persiste los cambios realizados sobre un cliente existente.")
   @PostMapping("/{id}/editar")
   public String actualizarCliente(
       @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -276,7 +289,9 @@ public class ClienteController {
   // ELIMINAR
   // ─────────────────────────────────────────────────────────────────────────
 
-  @Operation(summary = "Eliminar cliente", description = "Elimina permanentemente el cliente y todos sus datos asociados.")
+  @Operation(
+      summary = "Eliminar cliente",
+      description = "Elimina permanentemente el cliente y todos sus datos asociados.")
   @PostMapping("/{id}/eliminar")
   public String eliminarCliente(
       @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -303,8 +318,11 @@ public class ClienteController {
   // VISTA 360°
   // ─────────────────────────────────────────────────────────────────────────
 
-  @Operation(summary = "Vista 360° del cliente", description = "Carga la ficha integral del cliente: KPIs, factores de riesgo, tickets, encuestas y"
-      + " contratos.")
+  @Operation(
+      summary = "Vista 360° del cliente",
+      description =
+          "Carga la ficha integral del cliente: KPIs, factores de riesgo, tickets, encuestas y"
+              + " contratos.")
   @GetMapping("/{id}")
   public String verCliente360(
       @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -319,8 +337,7 @@ public class ClienteController {
     List<FactorSalud> factores = healthScoreService.obtenerFactoresRiesgo(cliente);
 
     // Encuestas vía capa de servicio (valida tenant — fix de seguridad)
-    List<EncuestaCsat> encuestas =
-    clienteService.obtenerEncuestasPorCliente(id);
+    List<EncuestaCsat> encuestas = clienteService.obtenerEncuestasPorCliente(id);
 
     // Actividades recientes: los tickets provienen del Cliente ya validado por
     // obtenerPorIdYEmpresa
@@ -337,6 +354,18 @@ public class ClienteController {
     }
 
     List<Renovacion> renovaciones = clienteService.obtenerRenovacionesPorCliente(id);
+
+    Long renovacionActivaId =
+        renovaciones.stream()
+            .filter(r ->
+                r.getEstado() == EstadoRenovacion.PENDIENTE
+                    || r.getEstado() == EstadoRenovacion.EN_NEGOCIACION)
+            .map(Renovacion::getId)
+            .findFirst()
+            .orElse(null);
+
+    model.addAttribute("renovacionActivaId", renovacionActivaId);
+
     List<Contacto> contactosActivos = clienteService.obtenerContactosActivos(id);
     List<Contacto> contactosInactivos = clienteService.obtenerContactosInactivos(id);
 
@@ -421,7 +450,8 @@ public class ClienteController {
 
     try {
       clienteService.obtenerPorIdYEmpresa(clienteId, empresaId);
-      CredencialesTemporales credenciales = clienteService.establecerContactoPrincipal(clienteId, contactoId);
+      CredencialesTemporales credenciales =
+          clienteService.establecerContactoPrincipal(clienteId, contactoId);
 
       if (credenciales != null) {
         redirectAttributes.addFlashAttribute("portalEmail", credenciales.email());
@@ -495,7 +525,8 @@ public class ClienteController {
     try {
       clienteService.obtenerPorIdYEmpresa(clienteId, empresaId);
 
-      CredencialesTemporales credenciales = clienteService.restablecerCredencialesPortal(clienteId, contactoId);
+      CredencialesTemporales credenciales =
+          clienteService.restablecerCredencialesPortal(clienteId, contactoId);
       redirectAttributes.addFlashAttribute(
           "successMessage", "Se generó una nueva contraseña temporal para el Portal Cliente.");
       redirectAttributes.addFlashAttribute("portalEmail", credenciales.email());
@@ -517,14 +548,15 @@ public class ClienteController {
 
     Rol rol = userDetails.getRol();
 
-    boolean permitido = switch (tab) {
-      case "resumen" -> true;
-      case "contactos" -> rol == Rol.ADMIN;
-      case "tickets" -> rol == Rol.ADMIN || rol == Rol.AGENTE;
-      case "actividad" -> rol == Rol.ADMIN || rol == Rol.AGENTE || rol == Rol.SUPERVISOR;
-      case "renovacion", "csat" -> rol == Rol.ADMIN || rol == Rol.SUPERVISOR;
-      default -> false;
-    };
+    boolean permitido =
+        switch (tab) {
+          case "resumen" -> true;
+          case "contactos" -> rol == Rol.ADMIN;
+          case "tickets" -> rol == Rol.ADMIN || rol == Rol.AGENTE;
+          case "actividad" -> rol == Rol.ADMIN || rol == Rol.AGENTE || rol == Rol.SUPERVISOR;
+          case "renovacion", "csat" -> rol == Rol.ADMIN || rol == Rol.SUPERVISOR;
+          default -> false;
+        };
     if (!permitido) {
       throw new AccessDeniedException("No tienes permisos para acceder a esta sección.");
     }

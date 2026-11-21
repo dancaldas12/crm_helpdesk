@@ -5,6 +5,7 @@ import com.serviclient.crm.entity.Renovacion;
 import com.serviclient.crm.entity.RenovacionSeguimiento;
 import com.serviclient.crm.entity.Usuario;
 import com.serviclient.crm.entity.enums.EstadoRenovacion;
+import com.serviclient.crm.repository.ClienteServicioRepository;
 import com.serviclient.crm.repository.RenovacionRepository;
 import com.serviclient.crm.repository.RenovacionSeguimientoRepository;
 import com.serviclient.crm.repository.UsuarioRepository;
@@ -16,11 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Implementación del servicio de gestión de renovaciones de contratos y retención de clientes.
- * <p>
- * Proporciona funcionalidades para el seguimiento de vencimientos de contratos (ARR),
- * cálculo de ventanas de riesgo (&lt;30 días, 31-90 días, &gt;90 días), registro de bitácoras
- * de interacción comercial y actualización del ciclo de vida de la renovación.
- * </p>
+ *
+ * <p>Proporciona funcionalidades para el seguimiento de vencimientos de contratos (ARR), cálculo de
+ * ventanas de riesgo (&lt;30 días, 31-90 días, &gt;90 días), registro de bitácoras de interacción
+ * comercial y actualización del ciclo de vida de la renovación.
  *
  * @author ServiClient Dev Team
  * @version 1.0.0
@@ -34,6 +34,7 @@ public class RenovacionService implements IRenovacionService {
   private final RenovacionSeguimientoRepository seguimientoRepository;
   private final HealthScoreService healthScoreService;
   private final UsuarioRepository usuarioRepository;
+  private final ClienteServicioRepository clienteServicioRepository;
 
   /**
    * Obtiene la totalidad de contratos y renovaciones registrados en el sistema.
@@ -53,7 +54,8 @@ public class RenovacionService implements IRenovacionService {
    * @return lista de renovaciones coincidentes
    */
   @Transactional(readOnly = true)
-  public List<Renovacion> listarProximasRenovaciones(Long empresaId, String busqueda, EstadoRenovacion estado) {
+  public List<Renovacion> listarProximasRenovaciones(
+      Long empresaId, String busqueda, EstadoRenovacion estado) {
     if (empresaId == null) {
       return List.of();
     }
@@ -62,7 +64,8 @@ public class RenovacionService implements IRenovacionService {
   }
 
   /**
-   * Calcula indicadores cuantitativos de contratos distribuidos por ventanas temporales de vencimiento.
+   * Calcula indicadores cuantitativos de contratos distribuidos por ventanas temporales de
+   * vencimiento.
    *
    * @param empresaId identificador de la empresa
    * @return objeto {@link MetricasRenovaciones} con conteos por períodos y estados
@@ -77,28 +80,25 @@ public class RenovacionService implements IRenovacionService {
 
     long menos30 =
         todas.stream()
-            .filter(
-                r ->
-                    r.getFechaVencimiento() != null
-                        && !r.getFechaVencimiento().isBefore(hoy)
-                        && r.getFechaVencimiento().isBefore(hoy.plusDays(30)))
+            .filter(r ->
+                r.getFechaVencimiento() != null
+                    && !r.getFechaVencimiento().isBefore(hoy)
+                    && r.getFechaVencimiento().isBefore(hoy.plusDays(30)))
             .count();
 
     long entre31y90 =
         todas.stream()
-            .filter(
-                r ->
-                    r.getFechaVencimiento() != null
-                        && !r.getFechaVencimiento().isBefore(hoy.plusDays(31))
-                        && r.getFechaVencimiento().isBefore(hoy.plusDays(91)))
+            .filter(r ->
+                r.getFechaVencimiento() != null
+                    && !r.getFechaVencimiento().isBefore(hoy.plusDays(31))
+                    && r.getFechaVencimiento().isBefore(hoy.plusDays(91)))
             .count();
 
     long mas90 =
         todas.stream()
-            .filter(
-                r ->
-                    r.getFechaVencimiento() != null
-                        && r.getFechaVencimiento().isAfter(hoy.plusDays(90)))
+            .filter(r ->
+                r.getFechaVencimiento() != null
+                    && r.getFechaVencimiento().isAfter(hoy.plusDays(90)))
             .count();
 
     long completadas =
@@ -141,9 +141,23 @@ public class RenovacionService implements IRenovacionService {
    */
   @Transactional
   public Renovacion actualizarEstado(Long id, EstadoRenovacion nuevoEstado, Usuario responsable) {
+
     Renovacion renovacion = obtenerPorId(id);
+
+    if (nuevoEstado == EstadoRenovacion.RENOVADO
+        || nuevoEstado == EstadoRenovacion.NO_RENOVADO
+        || nuevoEstado == EstadoRenovacion.NO_REALIZADO) {
+
+      throw new IllegalArgumentException("Utiliza el proceso de aprobación de propuestas.");
+    }
+
     renovacion.setEstado(nuevoEstado);
-    return renovacionRepository.save(renovacion);
+
+    Renovacion guardada = renovacionRepository.save(renovacion);
+
+    healthScoreService.recalcularYActualizarHealthScore(guardada.getCliente());
+
+    return guardada;
   }
 
   /**
@@ -156,15 +170,17 @@ public class RenovacionService implements IRenovacionService {
    */
   @Override
   @Transactional
-  public RenovacionSeguimiento agregarSeguimiento(Long renovacionId, String nota, Usuario responsable) {
+  public RenovacionSeguimiento agregarSeguimiento(
+      Long renovacionId, String nota, Usuario responsable) {
     Renovacion renovacion = obtenerPorId(renovacionId);
-    RenovacionSeguimiento seguimiento = RenovacionSeguimiento.builder()
-        .renovacion(renovacion)
-        .comentario(nota)
-        .usuario(responsable)
-        .estado(renovacion.getEstado())
-        .fecha(java.time.LocalDateTime.now())
-        .build();
+    RenovacionSeguimiento seguimiento =
+        RenovacionSeguimiento.builder()
+            .renovacion(renovacion)
+            .comentario(nota)
+            .usuario(responsable)
+            .estado(renovacion.getEstado())
+            .fecha(java.time.LocalDateTime.now())
+            .build();
     return seguimientoRepository.save(seguimiento);
   }
 
@@ -184,31 +200,41 @@ public class RenovacionService implements IRenovacionService {
 
     Renovacion renovacion = obtenerPorId(dto.getRenovacionId());
 
-    // Verificar que la renovación pertenezca a la empresa actual
+    // Validar que pertenece a la empresa actual.
     if (renovacion.getEmpresa() == null || !empresaId.equals(renovacion.getEmpresa().getId())) {
-      throw new IllegalArgumentException("La renovación no pertenece a la empresa actual.");
+
+      throw new IllegalArgumentException("La renovación no pertenece a esta empresa.");
     }
 
-    // Responsable seleccionado en el formulario
-    // Si no se selecciona, utilizar el usuario autenticado
+    // No modificar procesos finalizados.
+    if (renovacion.getEstado() == EstadoRenovacion.RENOVADO
+        || renovacion.getEstado() == EstadoRenovacion.NO_RENOVADO
+        || renovacion.getEstado() == EstadoRenovacion.NO_REALIZADO) {
+
+      throw new IllegalArgumentException("Esta renovación ya fue finalizada.");
+    }
+
+    // El seguimiento solo puede modificar estados internos.
+    if (dto.getEstado() != EstadoRenovacion.PENDIENTE
+        && dto.getEstado() != EstadoRenovacion.EN_NEGOCIACION) {
+
+      throw new IllegalArgumentException(
+          "Para aceptar o rechazar definitivamente " + "utiliza las propuestas de renovación.");
+    }
+
     Usuario responsable = usuario;
 
     if (dto.getResponsableId() != null) {
+
       responsable =
           usuarioRepository
               .findByIdAndEmpresaId(dto.getResponsableId(), empresaId)
-              .orElseThrow(() ->
-                  new IllegalArgumentException(
-                      "El responsable seleccionado no pertenece a esta empresa."));
+              .orElseThrow(() -> new IllegalArgumentException("Responsable no autorizado."));
     }
 
-    // Actualizar el estado de la renovación
-    if (dto.getEstado() != null) {
-      renovacion.setEstado(dto.getEstado());
-      renovacionRepository.save(renovacion);
-    }
+    renovacion.setEstado(dto.getEstado());
+    renovacionRepository.save(renovacion);
 
-    // Registrar el seguimiento con los datos del formulario
     RenovacionSeguimiento seguimiento =
         RenovacionSeguimiento.builder()
             .renovacion(renovacion)
@@ -222,7 +248,8 @@ public class RenovacionService implements IRenovacionService {
   }
 
   /**
-   * Obtiene el historial completo de seguimientos registrados para una renovación en orden cronológico inverso.
+   * Obtiene el historial completo de seguimientos registrados para una renovación en orden
+   * cronológico inverso.
    *
    * @param renovacionId identificador de la renovación
    * @return lista de seguimientos asociados

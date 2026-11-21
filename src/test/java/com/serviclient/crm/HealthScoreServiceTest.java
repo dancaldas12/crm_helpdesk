@@ -4,16 +4,23 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
-import com.serviclient.crm.repository.ClienteRepository;
-import com.serviclient.crm.repository.EncuestaCsatRepository;
-import com.serviclient.crm.repository.HealthScoreHistorialRepository;
-import com.serviclient.crm.repository.TicketRepository;
 import com.serviclient.crm.entity.Cliente;
+import com.serviclient.crm.entity.ClienteServicio;
 import com.serviclient.crm.entity.Empresa;
+import com.serviclient.crm.entity.Renovacion;
 import com.serviclient.crm.entity.enums.EstadoCliente;
+import com.serviclient.crm.entity.enums.EstadoRenovacion;
+import com.serviclient.crm.entity.enums.EstadoServicioCliente;
 import com.serviclient.crm.entity.enums.EstadoTicket;
 import com.serviclient.crm.entity.enums.PrioridadTicket;
+import com.serviclient.crm.repository.ClienteRepository;
+import com.serviclient.crm.repository.ClienteServicioRepository;
+import com.serviclient.crm.repository.EncuestaCsatRepository;
+import com.serviclient.crm.repository.HealthScoreHistorialRepository;
+import com.serviclient.crm.repository.RenovacionRepository;
+import com.serviclient.crm.repository.TicketRepository;
 import com.serviclient.crm.service.HealthScoreService;
+import com.serviclient.crm.service.NotificacionService;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +42,10 @@ class HealthScoreServiceTest {
   @Mock private HealthScoreHistorialRepository healthScoreHistorialRepository;
 
   @InjectMocks private HealthScoreService healthScoreService;
+  @Mock private NotificacionService notificacionService;
+  @Mock private RenovacionRepository renovacionRepository;
+
+  @Mock private ClienteServicioRepository clienteServicioRepository;
 
   private Empresa empresa;
   private Cliente cliente;
@@ -60,13 +71,13 @@ class HealthScoreServiceTest {
   @Test
   void testRecalcularHealthScoreEnRiesgo() {
     // Mock: 3 tickets abiertos, 2 de ellos críticos
-    when(ticketRepository.countByClienteIdAndEstadoNot(eq(10L), eq(EstadoTicket.CERRADO))).thenReturn(3L);
+    when(ticketRepository.countByClienteIdAndEstadoNot(eq(10L), eq(EstadoTicket.CERRADO)))
+        .thenReturn(3L);
     when(ticketRepository.countByClienteIdAndPrioridadAndEstadoNot(
             eq(10L), eq(PrioridadTicket.CRITICA), eq(EstadoTicket.CERRADO)))
         .thenReturn(2L);
     // Mock: CSAT bajo de 2.5
-    when(encuestaCsatRepository.findAverageScoreByClienteId(10L))
-    .thenReturn(2.5);
+    when(encuestaCsatRepository.findAverageScoreByClienteId(10L)).thenReturn(2.5);
 
     int score = healthScoreService.recalcularYActualizarHealthScore(cliente);
 
@@ -88,19 +99,79 @@ class HealthScoreServiceTest {
     assertTrue(factores.stream().anyMatch(f -> f.getTitulo().equals("Tickets Críticos Abiertos")));
   }
 
-
   @Test
   void testHealthScoreSinEncuestasNoPenaliza() {
 
-      when(encuestaCsatRepository.findAverageScoreByClienteId(10L))
-          .thenReturn(0.0);
+    when(encuestaCsatRepository.findAverageScoreByClienteId(10L)).thenReturn(0.0);
 
-      int score = healthScoreService
-          .recalcularYActualizarHealthScore(cliente);
+    int score = healthScoreService.recalcularYActualizarHealthScore(cliente);
 
-      // Sin tickets abiertos, críticos ni respuestas CSAT:
-      // El cliente conserva el puntaje base de 100.
-      assertEquals(100, score);
+    // Sin tickets abiertos, críticos ni respuestas CSAT:
+    // El cliente conserva el puntaje base de 100.
+    assertEquals(100, score);
   }
 
+  @Test
+  void testRenovacionVencidaPenalizaHealthScore() {
+
+    Renovacion renovacion =
+        Renovacion.builder()
+            .estado(EstadoRenovacion.PENDIENTE)
+            .fechaVencimiento(LocalDate.now().minusDays(5))
+            .build();
+
+    when(renovacionRepository.findByClienteId(10L)).thenReturn(List.of(renovacion));
+
+    int score = healthScoreService.recalcularYActualizarHealthScore(cliente);
+
+    assertEquals(60, score);
+  }
+
+  @Test
+  void testRenovacionCompletadaNoPenaliza() {
+
+    Renovacion renovacion =
+        Renovacion.builder()
+            .estado(EstadoRenovacion.RENOVADO)
+            .fechaVencimiento(LocalDate.now().minusDays(5))
+            .build();
+
+    when(renovacionRepository.findByClienteId(10L)).thenReturn(List.of(renovacion));
+
+    int score = healthScoreService.recalcularYActualizarHealthScore(cliente);
+
+    assertEquals(100, score);
+  }
+
+  @Test
+  void testRechazoDefinitivoPenalizaHealthScore() {
+
+    Renovacion renovacion =
+        Renovacion.builder()
+            .estado(EstadoRenovacion.NO_RENOVADO)
+            .fechaVencimiento(LocalDate.now().minusDays(5))
+            .build();
+
+    when(renovacionRepository.findByClienteId(10L)).thenReturn(List.of(renovacion));
+
+    int score = healthScoreService.recalcularYActualizarHealthScore(cliente);
+
+    assertEquals(60, score);
+  }
+
+  @Test
+  void testServicioVencidoSinRenovacionPenaliza() {
+
+    ClienteServicio servicio =
+        ClienteServicio.builder()
+            .estado(EstadoServicioCliente.ACTIVO)
+            .fechaFin(LocalDate.now().minusDays(2))
+            .build();
+
+    when(clienteServicioRepository.findByClienteId(10L)).thenReturn(List.of(servicio));
+
+    int score = healthScoreService.recalcularYActualizarHealthScore(cliente);
+
+    assertEquals(60, score);
+  }
 }

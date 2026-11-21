@@ -88,9 +88,15 @@
                         class="text-slate-400 hover:text-slate-600 relative transition">
                         <i class="fa-regular fa-bell text-lg"></i>
                         <!-- Indicador rojo (Badge) -->
-                        <span th:if="${encuestasPendientes != null and encuestasPendientes.size() > 0}"
-                            class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm"
-                            th:text="${encuestasPendientes.size()}">1</span>
+
+                        <span th:if="${!encuestasPendientes.isEmpty()
+                            or !renovacionesPendientes.isEmpty()}" class="absolute -top-1 -right-1 flex h-4 w-4
+                            items-center justify-center rounded-full bg-rose-500
+                            text-[10px] font-bold text-white shadow-sm" th:text="${encuestasPendientes.size()
+                            + renovacionesPendientes.size()}">
+                            1
+                        </span>
+
                     </button>
 
                     <!-- Menú Desplegable -->
@@ -102,8 +108,40 @@
                         </div>
                         <div class="max-h-72 overflow-y-auto">
 
+
+                            <!-- Notificaciones de renovación -->
+                            <button type="button" th:each="r : ${renovacionesPendientes}"
+                                th:data-modal-id="|modalRenovacion-${r.id}|" data-abrir-renovacion class="w-full text-left p-4 border-b
+                                    border-slate-100 hover:bg-indigo-50 transition">
+
+                                <div class="flex gap-3">
+
+                                    <i class="fa-solid fa-file-contract
+                                        text-indigo-600 mt-1"></i>
+
+                                    <div>
+                                        <p class="text-xs font-bold text-slate-800">
+                                            Propuesta de renovación
+                                        </p>
+
+                                        <p class="text-xs text-slate-500 mt-1">
+                                            Nuevo vencimiento:
+                                            <strong th:text="${#temporals.format(
+                                                 r.fechaPropuesta, 'dd/MM/yyyy')}"></strong>
+                                        </p>
+
+                                        <p class="text-xs text-indigo-600 mt-2">
+                                            Revisar propuesta
+                                        </p>
+                                    </div>
+
+                                </div>
+                            </button>
+
+
+
                             <!-- Lista de Encuestas Pendientes -->
-                            <div th:if="${encuestasPendientes != null and encuestasPendientes.size() > 0}">
+                            <div th:if="${!encuestasPendientes.isEmpty()}">
                                 <button type="button" th:each="encuesta : ${encuestasPendientes}"
                                     th:data-id="${encuesta.id}"
                                     th:data-ticket="${encuesta.ticket != null ? encuesta.ticket.numeroTicket : ''}"
@@ -129,7 +167,7 @@
                             </div>
 
                             <!-- Estado vacío -->
-                            <div th:if="${encuestasPendientes == null or encuestasPendientes.size() == 0}"
+                            <div th:if="${#lists.isEmpty(encuestasPendientes) and #lists.isEmpty(renovacionesPendientes)}"
                                 class="p-6 text-center text-slate-400">
                                 <i class="fa-regular fa-bell-slash text-2xl mb-2 opacity-50"></i>
                                 <p class="text-xs">No tienes notificaciones nuevas.</p>
@@ -148,6 +186,15 @@
         </header>
 
         <div class="p-8 max-w-7xl mx-auto w-full space-y-6">
+
+
+            <div th:if="${successMessage}" class="p-4 rounded-xl bg-emerald-50
+            border border-emerald-200 text-emerald-700 text-sm" th:text="${successMessage}">
+            </div>
+
+            <div th:if="${errorMessage}" class="p-4 rounded-xl bg-rose-50
+            border border-rose-200 text-rose-700 text-sm" th:text="${errorMessage}">
+            </div>
 
             <!-- Encabezado y botón Nuevo Ticket -->
             <div class="flex items-center justify-between">
@@ -300,6 +347,109 @@
 
         </div>
     </main>
+
+
+
+    <!-- MODAL DE RENOVACIÓN DEL PORTAL CLIENTE -->
+    <div th:each="r : ${renovacionesPendientes}" th:id="|modalRenovacion-${r.id}|" data-modal-renovacion class="hidden fixed inset-0 z-[70] flex items-center
+            justify-center bg-slate-900/60 p-4">
+
+        <div role="dialog" aria-modal="true" aria-label="Responder propuesta de renovación" class="relative bg-white rounded-2xl shadow-2xl
+                w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+
+            <button type="button" data-cerrar-renovacion aria-label="Cerrar" class="absolute top-4 right-5 text-slate-400
+                       hover:text-slate-700 text-2xl">
+                &times;
+            </button>
+
+            <h3 class="text-xl font-bold text-slate-900 mb-2">
+                Propuesta de renovación
+            </h3>
+
+            <p class="text-sm text-slate-500 mb-5">
+                Revisa la propuesta para continuar con tu servicio.
+            </p>
+
+            <div class="bg-slate-50 rounded-xl p-4 space-y-2 mb-5">
+
+                <p class="font-bold text-slate-900" th:text="${r.servicio}"></p>
+
+                <p class="text-sm text-slate-600">
+                    Vencimiento actual:
+                    <strong th:text="${#temporals.format(
+                    r.fechaVencimiento, 'dd/MM/yyyy')}"></strong>
+                </p>
+
+                <p class="text-sm text-indigo-700">
+                    Nueva fecha propuesta:
+                    <strong th:text="${#temporals.format(
+                    r.fechaPropuesta, 'dd/MM/yyyy')}"></strong>
+                </p>
+
+                <p th:if="${r.mensajePropuesta != null
+                      and !r.mensajePropuesta.isBlank()}" class="text-sm text-slate-600"
+                    th:text="${r.mensajePropuesta}"></p>
+            </div>
+
+            <div th:if="${puedeResponderRenovacion}">
+
+                <!-- ACEPTAR O RECHAZAR -->
+                <form th:action="@{/portal/mis-tickets/renovaciones/{id}/responder(id=${r.id})}" method="post">
+
+                    <textarea name="mensaje" rows="2" placeholder="Comentario o motivo (opcional)" class="w-full p-3 rounded-xl border
+                                 border-slate-200 text-sm mb-3"></textarea>
+
+                    <div class="flex flex-wrap gap-2 mb-5">
+
+                        <button type="submit" name="accion" value="ACEPTAR" class="px-4 py-2 rounded-lg bg-emerald-600
+                                   text-white text-sm font-semibold">
+                            Aceptar
+                        </button>
+
+                        <button type="submit" name="accion" value="RECHAZAR" class="px-4 py-2 rounded-lg bg-amber-500
+                                   text-white text-sm font-semibold">
+                            Rechazar y negociar
+                        </button>
+
+                        <button type="submit" name="accion" value="RECHAZAR_DEFINITIVO"
+                            onclick="return confirm('¿Seguro que no deseas renovar el contrato?')" class="px-4 py-2 rounded-lg bg-rose-600
+                                   text-white text-sm font-semibold">
+                            Rechazar definitivamente
+                        </button>
+
+                    </div>
+                </form>
+
+                <!-- CONTRAOFERTA -->
+                <form th:action="@{/portal/mis-tickets/renovaciones/{id}/responder(id=${r.id})}" method="post"
+                    class="border-t border-slate-200 pt-4 space-y-3">
+
+                    <input type="hidden" name="accion" value="CONTRAOFERTA">
+
+                    <h4 class="font-bold text-slate-800 text-sm">
+                        Enviar contraoferta
+                    </h4>
+
+                    <input type="date" name="nuevaFecha" required class="w-full p-3 rounded-xl
+                              border border-slate-200 text-sm">
+
+                    <textarea name="mensaje" rows="2" placeholder="Explica las condiciones de tu propuesta" class="w-full p-3 rounded-xl border
+                                 border-slate-200 text-sm"></textarea>
+
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600
+                               text-white text-sm font-semibold">
+                        Enviar contraoferta
+                    </button>
+                </form>
+
+            </div>
+
+            <p th:unless="${puedeResponderRenovacion}" class="text-sm text-amber-700">
+                Solo el contacto principal puede responder esta propuesta.
+            </p>
+
+        </div>
+    </div>
 
 
     <!-- MODAL MI CUENTA -->
@@ -761,6 +911,58 @@
         /*[# th:if="${abrirModalPassword}"]*/
         abrirPassword();
         /*[/]*/
+
+        // Abrir propuestas desde la campana.
+        document.querySelectorAll('[data-abrir-renovacion]')
+            .forEach(boton => {
+
+                boton.addEventListener('click', () => {
+
+                    const modal = document.getElementById(
+                        boton.dataset.modalId
+                    );
+
+                    if (modal) {
+                        modal.classList.remove('hidden');
+                        notiDropdown.classList.add('hidden');
+                    }
+                });
+            });
+
+        // Cerrar el modal sin responder la propuesta.
+        // No se modifica nada en la base de datos.
+        document.querySelectorAll('[data-cerrar-renovacion]')
+            .forEach(boton => {
+
+                boton.addEventListener('click', () => {
+
+                    boton.closest('[data-modal-renovacion]')
+                        .classList.add('hidden');
+                });
+            });
+
+        // Permitir cerrar pulsando fuera.
+        document.querySelectorAll('[data-modal-renovacion]')
+            .forEach(modal => {
+
+                modal.addEventListener('click', evento => {
+
+                    if (evento.target === modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            });
+
+        // Permitir cerrar con Escape.
+        document.addEventListener('keydown', evento => {
+
+            if (evento.key === 'Escape') {
+
+                document.querySelectorAll('[data-modal-renovacion]')
+                    .forEach(modal => modal.classList.add('hidden'));
+            }
+        });
+
     </script>
 </body>
 
