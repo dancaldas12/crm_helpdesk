@@ -144,6 +144,22 @@ class HealthScoreServiceTest {
   }
 
   @Test
+  void testRechazoDefinitivoPenalizaHealthScore() {
+
+    Renovacion renovacion =
+        Renovacion.builder()
+            .estado(EstadoRenovacion.NO_RENOVADO)
+            .fechaVencimiento(LocalDate.now().minusDays(5))
+            .build();
+
+    when(renovacionRepository.findByClienteId(10L)).thenReturn(List.of(renovacion));
+
+    int score = healthScoreService.recalcularYActualizarHealthScore(cliente);
+
+    assertEquals(60, score);
+  }
+
+  @Test
   void testServicioVencidoSinRenovacionPenaliza() {
 
     ClienteServicio servicio =

@@ -250,14 +250,14 @@ public class Cliente {
 
   public String getHealthScoreColorClass() {
     int hs = getHealthScore();
-    if (hs >= 70) return "bg-emerald-500";
+    if (hs >= 80) return "bg-emerald-500";
     if (hs >= 50) return "bg-amber-500";
     return "bg-rose-500";
   }
 
   public String getHealthScoreTextColorClass() {
     int hs = getHealthScore();
-    if (hs >= 70) return "text-emerald-600";
+    if (hs >= 80) return "text-emerald-600";
     if (hs >= 50) return "text-amber-600";
     return "text-rose-600";
   }

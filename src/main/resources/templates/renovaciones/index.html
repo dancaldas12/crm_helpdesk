@@ -166,7 +166,7 @@
                             <div class="health-score-cell">
                                 <div class="health-bar-bg">
                                     <div class="health-bar-fill" th:style="'width: ' + ${r.cliente.healthScore} + '%;'"
-                                        th:classappend="${r.cliente.healthScore >= 70 ? 'fill-green' : (r.cliente.healthScore >= 50 ? 'fill-amber' : 'fill-red')}">
+                                        th:classappend="${r.cliente.healthScore >= 80 ? 'fill-green' : (r.cliente.healthScore >= 50 ? 'fill-amber' : 'fill-red')}">
                                     </div>
                                 </div>
                                 <span style="font-size: 12px; color: var(--color-text-muted);"
@@ -183,7 +183,9 @@
                                 <!-- Seguimiento -->
 
                                 <button type="button" class="btn btn-secondary" style="padding: 8px 10px;"
-                                    data-action-seguimiento th:data-renovacion-id="${r.id}"
+                                    data-action-seguimiento
+                                    th:if="${r.estado.name() == 'PENDIENTE' or r.estado.name() == 'EN_NEGOCIACION'}"
+                                    th:data-renovacion-id="${r.id}"
                                     th:data-renovacion-cliente="${r.cliente.nombreComercial}"
                                     title="Registrar seguimiento" aria-label="Registrar seguimiento">
 

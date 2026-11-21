@@ -141,7 +141,7 @@
 
 
                             <!-- Lista de Encuestas Pendientes -->
-                            <div th:if="${encuestasPendientes.isEmpty() and renovacionesPendientes.isEmpty()}">
+                            <div th:if="${!encuestasPendientes.isEmpty()}">
                                 <button type="button" th:each="encuesta : ${encuestasPendientes}"
                                     th:data-id="${encuesta.id}"
                                     th:data-ticket="${encuesta.ticket != null ? encuesta.ticket.numeroTicket : ''}"

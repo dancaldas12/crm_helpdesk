@@ -198,15 +198,33 @@ public class HealthScoreService implements IHealthScoreService {
 
     if (renovaciones != null && !renovaciones.isEmpty()) {
 
-      return renovaciones.stream()
-          .filter(r ->
-              r.getEstado() == EstadoRenovacion.PENDIENTE
-                  || r.getEstado() == EstadoRenovacion.EN_NEGOCIACION)
-          .map(Renovacion::getFechaVencimiento)
-          .filter(Objects::nonNull)
-          .mapToInt(fecha -> penalizacionPorFecha(fecha, hoy))
-          .max()
-          .orElse(0);
+      // Primero evaluar renovaciones pendientes o en negociación.
+      boolean tieneRenovacionActiva =
+          renovaciones.stream()
+              .anyMatch(r ->
+                  r.getEstado() == EstadoRenovacion.PENDIENTE
+                      || r.getEstado() == EstadoRenovacion.EN_NEGOCIACION);
+
+      if (tieneRenovacionActiva) {
+        return renovaciones.stream()
+            .filter(r ->
+                r.getEstado() == EstadoRenovacion.PENDIENTE
+                    || r.getEstado() == EstadoRenovacion.EN_NEGOCIACION)
+            .map(Renovacion::getFechaVencimiento)
+            .filter(Objects::nonNull)
+            .mapToInt(fecha -> penalizacionPorFecha(fecha, hoy))
+            .max()
+            .orElse(0);
+      }
+
+      // Si el cliente decidió no renovar, mantenerlo como riesgo.
+      boolean noRenovo =
+          renovaciones.stream()
+              .anyMatch(r ->
+                  r.getEstado() == EstadoRenovacion.NO_RENOVADO
+                      || r.getEstado() == EstadoRenovacion.NO_REALIZADO);
+
+      return noRenovo ? 40 : 0;
     }
 
     // Segunda fuente: servicios que aún no tienen renovación.
