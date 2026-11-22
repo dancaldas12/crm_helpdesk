@@ -213,7 +213,7 @@ public class DataInitializer implements CommandLineRunner {
                         .build()));
 
         // 4. Servicios
-        Servicio srvErp = servicioRepository.findByCodigo("SRV-ERP").orElseGet(() ->
+        Servicio srvErp = servicioRepository.findByEmpresaIdAndCodigo(empresa.getId(),"SRV-ERP").orElseGet(() ->
                 servicioRepository.save(Servicio.builder()
                         .empresa(empresa)
                         .nombre("ERP Cloud Enterprise")
@@ -222,7 +222,7 @@ public class DataInitializer implements CommandLineRunner {
                         .estado("ACTIVO")
                         .build()));
 
-        Servicio srvHelpdesk = servicioRepository.findByCodigo("SRV-HD").orElseGet(() ->
+        Servicio srvHelpdesk = servicioRepository.findByEmpresaIdAndCodigo(empresa.getId(),"SRV-HD").orElseGet(() ->
                 servicioRepository.save(Servicio.builder()
                         .empresa(empresa)
                         .nombre("Helpdesk Omni-channel")
@@ -231,7 +231,7 @@ public class DataInitializer implements CommandLineRunner {
                         .estado("ACTIVO")
                         .build()));
 
-        Servicio srvCrm = servicioRepository.findByCodigo("SRV-CRM").orElseGet(() ->
+        Servicio srvCrm = servicioRepository.findByEmpresaIdAndCodigo(empresa.getId(),"SRV-CRM").orElseGet(() ->
                 servicioRepository.save(Servicio.builder()
                         .empresa(empresa)
                         .nombre("CRM Ventas Pro")
@@ -240,7 +240,7 @@ public class DataInitializer implements CommandLineRunner {
                         .estado("ACTIVO")
                         .build()));
 
-        Servicio srvAnalytics = servicioRepository.findByCodigo("SRV-AI").orElseGet(() ->
+        Servicio srvAnalytics = servicioRepository.findByEmpresaIdAndCodigo(empresa.getId(),"SRV-AI").orElseGet(() ->
                 servicioRepository.save(Servicio.builder()
                         .empresa(empresa)
                         .nombre("Analítica Avanzada & IA")
@@ -249,7 +249,7 @@ public class DataInitializer implements CommandLineRunner {
                         .estado("ACTIVO")
                         .build()));
 
-        Servicio srvSoportePremium = servicioRepository.findByCodigo("SRV-SP24").orElseGet(() ->
+        Servicio srvSoportePremium = servicioRepository.findByEmpresaIdAndCodigo(empresa.getId(),"SRV-SP24").orElseGet(() ->
                 servicioRepository.save(Servicio.builder()
                         .empresa(empresa)
                         .nombre("Soporte Premium 24/7")
@@ -258,7 +258,7 @@ public class DataInitializer implements CommandLineRunner {
                         .estado("ACTIVO")
                         .build()));
 
-        Servicio srvModuloAnalytics = servicioRepository.findByCodigo("SRV-ANL").orElseGet(() ->
+        Servicio srvModuloAnalytics = servicioRepository.findByEmpresaIdAndCodigo(empresa.getId(),"SRV-ANL").orElseGet(() ->
                 servicioRepository.save(Servicio.builder()
                         .empresa(empresa)
                         .nombre("Módulo Analytics")
