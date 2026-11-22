@@ -153,7 +153,7 @@ public class TicketController {
             @AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
         Long empresaId = resolverEmpresaId(userDetails);
         List<Cliente> clientes = clienteService.listarTodosPorEmpresa(empresaId);
-        List<Usuario> agentes = usuarioService.obtenerAgentesYAdminsPorEmpresa(empresaId);
+        List<Usuario> agentes = usuarioService.obtenerAgentesSoporteActivos(empresaId);
 
         model.addAttribute("ticketDto", new TicketDto());
         model.addAttribute("clientes", clientes);
@@ -195,7 +195,7 @@ public class TicketController {
 
         if (bindingResult.hasErrors()) {
             model.addAttribute("clientes", clienteService.listarTodosPorEmpresa(empresaId));
-            model.addAttribute("agentes", usuarioService.obtenerAgentesYAdminsPorEmpresa(empresaId));
+            model.addAttribute("agentes", usuarioService.obtenerAgentesSoporteActivos(empresaId));
             model.addAttribute("categorias", CategoriaTicket.values());
             model.addAttribute("prioridades", PrioridadTicket.values());
             model.addAttribute("activeMenu", "tickets");
@@ -211,7 +211,7 @@ public class TicketController {
             log.error("Error al crear ticket", ex);
             model.addAttribute("errorMessage", "Error al crear ticket: " + ex.getMessage());
             model.addAttribute("clientes", clienteService.listarTodosPorEmpresa(empresaId));
-            model.addAttribute("agentes", usuarioService.obtenerAgentesYAdminsPorEmpresa(empresaId));
+            model.addAttribute("agentes", usuarioService.obtenerAgentesSoporteActivos(empresaId));
             model.addAttribute("categorias", CategoriaTicket.values());
             model.addAttribute("prioridades", PrioridadTicket.values());
             model.addAttribute("activeMenu", "tickets");
@@ -242,7 +242,7 @@ public class TicketController {
             Model model) {
         Long empresaId = resolverEmpresaId(userDetails);
         Ticket ticket = ticketService.obtenerPorIdYEmpresa(id, empresaId);
-        List<Usuario> agentes = usuarioService.obtenerAgentesYAdminsPorEmpresa(empresaId);
+        List<Usuario> agentes = usuarioService.obtenerAgentesSoporteActivos(empresaId);
 
         model.addAttribute("ticket", ticket);
         model.addAttribute("agentes", agentes);

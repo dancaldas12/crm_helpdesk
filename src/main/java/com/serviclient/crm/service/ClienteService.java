@@ -3,6 +3,7 @@ package com.serviclient.crm.service;
 import com.serviclient.crm.dto.ClienteDto;
 import com.serviclient.crm.entity.*;
 import com.serviclient.crm.entity.enums.EstadoCliente;
+import com.serviclient.crm.entity.enums.EstadoRenovacion;
 import com.serviclient.crm.entity.enums.EstadoSaludCliente;
 import com.serviclient.crm.entity.enums.EstadoServicioCliente;
 import com.serviclient.crm.entity.enums.EstadoTicket;
@@ -20,7 +21,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -248,6 +251,7 @@ public class ClienteService implements IClienteService {
 
   @Transactional
   public ResultadoCreacionCliente crearCliente(Long empresaId, ClienteDto dto) {
+    validarFechasContrato(dto);
     Empresa empresa = empresaService.obtenerPorId(empresaId);
     if (clienteRepository.findByEmpresaIdAndRuc(empresaId, dto.getRuc()).isPresent()) {
       log.warn(
@@ -288,25 +292,19 @@ public class ClienteService implements IClienteService {
     log.info(
         "Cliente creado correctamente. clienteId={}, empresaId={}", guardado.getId(), empresaId);
 
-    // Crear o vincular Servicio
-    String nombreServicio =
-        (dto.getServicioContratado() != null && !dto.getServicioContratado().isBlank())
-            ? dto.getServicioContratado()
-            : "Plan SaaS Cloud";
+    // Vincular un servicio existente del catálogo
+    if (dto.getServicioId() == null) {
+      throw new IllegalArgumentException("Debes seleccionar un servicio.");
+    }
 
     Servicio servicio =
-        servicioRepository.findByEmpresaId(empresaId).stream()
-            .filter(s -> s.getNombre().equalsIgnoreCase(nombreServicio))
-            .findFirst()
-            .orElseGet(() ->
-                servicioRepository.save(
-                    Servicio.builder()
-                        .empresa(empresa)
-                        .nombre(nombreServicio)
-                        .descripcion(nombreServicio + " para cliente")
-                        .codigo("SRV-" + Math.abs(nombreServicio.hashCode() % 10000))
-                        .estado("ACTIVO")
-                        .build()));
+        servicioRepository
+            .findByIdAndEmpresaId(dto.getServicioId(), empresaId)
+            .orElseThrow(() -> new IllegalArgumentException("El servicio seleccionado no existe."));
+
+    if (!"ACTIVO".equals(servicio.getEstado())) {
+      throw new IllegalArgumentException("El servicio seleccionado no está disponible.");
+    }
 
     LocalDate fechaIni = dto.getFechaInicio() != null ? dto.getFechaInicio() : LocalDate.now();
     LocalDate fechaFin =
@@ -320,7 +318,21 @@ public class ClienteService implements IClienteService {
             .fechaFin(fechaFin)
             .estado(EstadoServicioCliente.ACTIVO)
             .build();
-    clienteServicioRepository.save(cs);
+    cs = clienteServicioRepository.save(cs);
+
+    // Registrar el primer ciclo de renovación
+    Renovacion renovacion =
+        Renovacion.builder()
+            .empresa(empresa)
+            .cliente(guardado)
+            .clienteServicio(cs)
+            .responsable(responsable)
+            .fechaVencimiento(fechaFin)
+            .diasAlerta(30)
+            .estado(EstadoRenovacion.PENDIENTE)
+            .build();
+
+    renovacionRepository.save(renovacion);
 
     CuentaPortalService.CredencialesTemporales credencialesPortal = null;
 
@@ -371,6 +383,7 @@ public class ClienteService implements IClienteService {
 
   @Transactional
   public Cliente actualizarCliente(Long id, Long empresaId, ClienteDto dto) {
+    validarFechasContrato(dto);
     Cliente cliente = obtenerPorIdYEmpresa(id, empresaId);
 
     Usuario responsable = null;
@@ -396,49 +409,94 @@ public class ClienteService implements IClienteService {
 
     if (dto.getLogoUrl() != null) cliente.setLogoUrl(dto.getLogoUrl());
 
-    // Actualizar servicio contratado
-    if (dto.getServicioContratado() != null && !dto.getServicioContratado().isBlank()) {
-      Empresa empresa = empresaService.obtenerPorId(empresaId);
-      String nombreServicio = dto.getServicioContratado();
+    // Vincular un servicio existente del catálogo
+    if (dto.getServicioId() == null) {
+      throw new IllegalArgumentException("Debes seleccionar un servicio.");
+    }
 
-      Servicio servicio =
-          servicioRepository.findByEmpresaId(empresaId).stream()
-              .filter(s -> s.getNombre().equalsIgnoreCase(nombreServicio))
-              .findFirst()
-              .orElseGet(() ->
-                  servicioRepository.save(
-                      Servicio.builder()
-                          .empresa(empresa)
-                          .nombre(nombreServicio)
-                          .descripcion(nombreServicio + " para cliente")
-                          .codigo("SRV-" + Math.abs(nombreServicio.hashCode() % 10000))
-                          .estado("ACTIVO")
-                          .build()));
+    Servicio servicio =
+        servicioRepository
+            .findByIdAndEmpresaId(dto.getServicioId(), empresaId)
+            .orElseThrow(() -> new IllegalArgumentException("Servicio no encontrado."));
 
-      // Actualizar o crear ClienteServicio
-      List<ClienteServicio> serviciosActuales = clienteServicioRepository.findByClienteId(id);
-      if (!serviciosActuales.isEmpty()) {
-        ClienteServicio cs = serviciosActuales.get(0);
+    List<ClienteServicio> contratos = clienteServicioRepository.findByClienteId(id);
+
+    ClienteServicio cs =
+        contratos.stream().min(Comparator.comparing(ClienteServicio::getId)).orElse(null);
+
+    boolean cambioServicio =
+        cs == null || !Objects.equals(cs.getServicio().getId(), servicio.getId());
+
+    if (cambioServicio && !"ACTIVO".equals(servicio.getEstado())) {
+      throw new IllegalArgumentException("El servicio seleccionado no está disponible.");
+    }
+
+    if (cs != null) {
+
+      final Long contratoId = cs.getId();
+
+      boolean tieneHistorial =
+          renovacionRepository.findByClienteId(id).stream()
+              .filter(r -> r.getClienteServicio() != null)
+              .filter(r -> Objects.equals(r.getClienteServicio().getId(), contratoId))
+              .anyMatch(r ->
+                  r.getEstado() != EstadoRenovacion.PENDIENTE
+                      || r.getPendienteDe() != null
+                      || !r.getSeguimientos().isEmpty());
+
+      if (cambioServicio && (tieneHistorial || contratos.size() > 1)) {
+        throw new IllegalArgumentException(
+            "No se puede cambiar un servicio con historial "
+                + "de renovación o múltiples contratos.");
+      }
+
+      if (!Objects.equals(cs.getFechaInicio(), dto.getFechaInicio())
+          || !Objects.equals(cs.getFechaFin(), dto.getFechaRenovacion())) {
+        throw new IllegalArgumentException(
+            "Las fechas del contrato vigente no pueden " + "modificarse desde este formulario.");
+      }
+
+      if (cambioServicio) {
         cs.setServicio(servicio);
-        if (dto.getFechaInicio() != null) cs.setFechaInicio(dto.getFechaInicio());
-        if (dto.getFechaRenovacion() != null) cs.setFechaFin(dto.getFechaRenovacion());
-        clienteServicioRepository.save(cs);
-      } else {
-        LocalDate fechaIni = dto.getFechaInicio() != null ? dto.getFechaInicio() : LocalDate.now();
-        LocalDate fechaFin =
-            dto.getFechaRenovacion() != null
-                ? dto.getFechaRenovacion()
-                : LocalDate.now().plusYears(1);
-        ClienteServicio cs =
-            ClienteServicio.builder()
-                .cliente(cliente)
-                .servicio(servicio)
-                .fechaInicio(fechaIni)
-                .fechaFin(fechaFin)
-                .estado(EstadoServicioCliente.ACTIVO)
-                .build();
         clienteServicioRepository.save(cs);
       }
+
+    } else {
+
+      cs =
+          clienteServicioRepository.save(
+              ClienteServicio.builder()
+                  .cliente(cliente)
+                  .servicio(servicio)
+                  .fechaInicio(dto.getFechaInicio())
+                  .fechaFin(dto.getFechaRenovacion())
+                  .estado(EstadoServicioCliente.ACTIVO)
+                  .build());
+    }
+
+    // Crear la renovación si el contrato todavía no tiene registros
+    final Long contratoId = cs.getId();
+
+    boolean tieneRenovacion =
+        renovacionRepository.findByClienteId(id).stream()
+            .anyMatch(r ->
+                r.getClienteServicio() != null
+                    && Objects.equals(r.getClienteServicio().getId(), contratoId));
+
+    if (!tieneRenovacion) {
+
+      renovacionRepository.save(
+          Renovacion.builder()
+              .empresa(cliente.getEmpresa())
+              .cliente(cliente)
+              .clienteServicio(cs)
+              .responsable(responsable)
+              .fechaVencimiento(cs.getFechaFin())
+              .diasAlerta(30)
+              .estado(EstadoRenovacion.PENDIENTE)
+              .build());
+
+      healthScoreService.recalcularYActualizarHealthScore(cliente);
     }
 
     return clienteRepository.save(cliente);
@@ -468,9 +526,16 @@ public class ClienteService implements IClienteService {
     if (cliente.getResponsable() != null) {
       dto.setResponsableId(cliente.getResponsable().getId());
     }
-    dto.setServicioContratado(cliente.getServicioContratado());
-    dto.setFechaInicio(cliente.getFechaInicio());
-    dto.setFechaRenovacion(cliente.getFechaRenovacion());
+
+    clienteServicioRepository.findByClienteId(cliente.getId()).stream()
+        .min(Comparator.comparing(ClienteServicio::getId))
+        .ifPresent(cs -> {
+          dto.setServicioId(cs.getServicio().getId());
+          dto.setServicioContratado(cs.getServicio().getNombre());
+          dto.setFechaInicio(cs.getFechaInicio());
+          dto.setFechaRenovacion(cs.getFechaFin());
+        });
+
     return dto;
   }
 
@@ -721,5 +786,17 @@ public class ClienteService implements IClienteService {
   @Transactional(readOnly = true)
   public List<Renovacion> obtenerRenovacionesPorCliente(Long clienteId) {
     return renovacionRepository.findByClienteId(clienteId);
+  }
+
+  private void validarFechasContrato(ClienteDto dto) {
+
+    if (dto.getFechaInicio() == null || dto.getFechaRenovacion() == null) {
+      throw new IllegalArgumentException("Las fechas del contrato son obligatorias.");
+    }
+
+    if (!dto.getFechaRenovacion().isAfter(dto.getFechaInicio())) {
+      throw new IllegalArgumentException(
+          "La fecha de renovación debe ser posterior " + "a la fecha de inicio.");
+    }
   }
 }

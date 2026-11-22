@@ -115,4 +115,6 @@ public interface IUsuarioService {
      * @throws IllegalArgumentException si las contraseñas no coinciden o no cumplen la longitud requerida
      */
     void cambiarPasswordTemporal(Long usuarioId, String nuevaPassword, String confirmarPassword);
+
+    List<Usuario> obtenerAgentesSoporteActivos(Long empresaId);
 }

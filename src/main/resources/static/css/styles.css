@@ -119,9 +119,28 @@ body {
 .sidebar-nav {
     padding: 16px 12px;
     flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+}
+
+.nav-section {
     display: flex;
     flex-direction: column;
     gap: 4px;
+}
+
+.nav-section-title {
+    padding: 0 16px;
+    margin-bottom: 6px;
+    color: #7c8ba1;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    user-select: none;
 }
 
 .nav-link {

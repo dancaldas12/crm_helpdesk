@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+    th:replace="~{layout/base :: layout('Gestión de Servicios', 'servicios', ~{::section})}">
+
+<head>
+    <title>Gestión de Servicios - ServiClient</title>
+</head>
+
+<body>
+    <section>
+
+        <!-- CABECERA -->
+        <div class="page-header-row">
+
+            <div class="page-title-group">
+                <h1>Gestión de Servicios</h1>
+                <p>Administra el catálogo de servicios de tu empresa.</p>
+            </div>
+
+            <button type="button" class="btn btn-primary" data-modal-target="modalNuevoServicio">
+
+                <svg style="width:18px;height:18px" fill="none" stroke="currentColor" stroke-width="2.5"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+
+                Nuevo servicio
+            </button>
+        </div>
+
+        <!-- INDICADORES -->
+        <div style="display:grid;
+                grid-template-columns:repeat(3,minmax(0,1fr));
+                gap:16px;margin-bottom:28px;">
+
+            <div class="metric-card">
+                <div class="metric-card-label">
+                    Total servicios
+                </div>
+                <div class="metric-card-value" th:text="${totalServicios}">0</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-card-label">
+                    Servicios activos
+                </div>
+                <div class="metric-card-value text-saludable" th:text="${serviciosActivos}">0</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-card-label">
+                    Servicios inactivos
+                </div>
+                <div class="metric-card-value" style="color:#64748b" th:text="${serviciosInactivos}">0</div>
+            </div>
+
+        </div>
+
+        <!-- TABLA DE SERVICIOS -->
+        <div class="table-card">
+
+            <div class="table-toolbar">
+                <div style="display:flex;align-items:center;gap:10px">
+
+                    <strong style="font-size:14px">
+                        Catálogo de servicios
+                    </strong>
+
+                    <span class="badge" style="background:#eef2ff;color:#4f46e5"
+                        th:text="${totalServicios + ' registrados'}">
+                        0 registrados
+                    </span>
+
+                </div>
+            </div>
+
+            <div style="overflow-x:auto">
+
+                <table class="custom-table">
+
+                    <thead>
+                        <tr>
+                            <th>Servicio</th>
+                            <th>Código</th>
+                            <th>Descripción</th>
+                            <th>Estado</th>
+                            <th style="text-align:right">Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        <tr th:each="s : ${servicios}">
+
+                            <td>
+                                <div style="display:flex;
+                                    align-items:center;
+                                    gap:12px;">
+
+                                    <div style="width:38px;height:38px;
+                                        border-radius:10px;
+                                        background:#eef2ff;
+                                        color:#6366f1;
+                                        display:flex;
+                                        align-items:center;
+                                        justify-content:center;
+                                        flex-shrink:0;">
+
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
+                                            <path d="M12 2 3 7v10l9 5 9-5V7L12 2Z" />
+                                            <path d="m3 7 9 5 9-5M12 12v10" />
+                                        </svg>
+
+                                    </div>
+
+                                    <strong th:text="${s.nombre}">
+                                        Nombre del servicio
+                                    </strong>
+                                </div>
+                            </td>
+
+                            <td th:text="${s.codigo != null ? s.codigo : '-'}">
+                                SRV-001
+                            </td>
+
+                            <td>
+                                <div style="max-width:320px;
+                                    overflow:hidden;
+                                    text-overflow:ellipsis;
+                                    white-space:nowrap;" th:title="${s.descripcion}" th:text="${s.descripcion != null
+                                 and !s.descripcion.isBlank()
+                                 ? s.descripcion
+                                 : 'Sin descripción'}">
+                                    Descripción
+                                </div>
+                            </td>
+
+                            <td>
+                                <span th:if="${s.estado == 'ACTIVO'}" class="badge badge-saludable">
+                                    Activo
+                                </span>
+
+                                <span th:unless="${s.estado == 'ACTIVO'}" class="badge" style="background:#f1f5f9;
+                                     color:#64748b;">
+                                    Inactivo
+                                </span>
+                            </td>
+
+                            <td>
+                                <div style="display:flex;
+                                    justify-content:flex-end;
+                                    gap:8px;">
+
+                                    <button type="button" class="btn btn-secondary" style="padding:6px 12px;
+                                           font-size:12px;
+                                           color:#4f46e5;
+                                           background:#eef2ff;
+                                           border-color:#c7d2fe"
+                                        th:attr="data-modal-target=${'modalEditarServicio-' + s.id}">
+                                        Editar
+                                    </button>
+
+                                    <button type="button" class="btn btn-secondary"
+                                        th:attr="data-modal-target=${'modalEstadoServicio-' + s.id}"
+                                        th:style="${s.estado == 'ACTIVO'}
+                                      ? 'padding:6px 12px;font-size:12px;background:#fef2f2;color:#dc2626;border-color:#fecaca'
+                                      : 'padding:6px 12px;font-size:12px;background:#ecfdf5;color:#059669;border-color:#a7f3d0'" th:text="${s.estado == 'ACTIVO'
+                                        ? 'Desactivar' : 'Activar'}">
+                                        Desactivar
+                                    </button>
+
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr th:if="${servicios.isEmpty()}">
+                            <td colspan="5" style="text-align:center;
+                               padding:42px;
+                               color:var(--color-text-muted)">
+                                No hay servicios registrados.
+                            </td>
+                        </tr>
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- MODAL NUEVO SERVICIO -->
+        <div id="modalNuevoServicio" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Nuevo servicio">
+
+            <div class="modal-card" style="max-width:540px">
+
+                <div class="modal-header">
+                    <div>
+                        <div class="modal-title">
+                            Nuevo servicio
+                        </div>
+                        <div style="font-size:12px;
+                                color:var(--color-text-muted);
+                                margin-top:4px;">
+                            Registra un servicio en el catálogo.
+                        </div>
+                    </div>
+
+                    <button type="button" class="modal-close-btn" data-modal-close aria-label="Cerrar">&times;</button>
+                </div>
+
+                <form th:action="@{/servicios}" method="post">
+
+                    <div class="modal-body">
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Código del servicio *
+                            </label>
+                            <input type="text" name="codigo" class="form-input" maxlength="50" placeholder="Ej. SRV-CRM"
+                                required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Nombre del servicio *
+                            </label>
+                            <input type="text" name="nombre" class="form-input" maxlength="150"
+                                placeholder="Ej. CRM Empresarial" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Descripción
+                            </label>
+                            <textarea name="descripcion" class="form-textarea" rows="4"
+                                placeholder="Describe las características del servicio..."></textarea>
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-modal-close>
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Registrar servicio
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+        <!-- MODALES POR SERVICIO -->
+        <th:block th:each="s : ${servicios}">
+
+            <!-- EDITAR SERVICIO -->
+            <div th:id="${'modalEditarServicio-' + s.id}" class="modal-overlay" role="dialog" aria-modal="true"
+                aria-label="Editar servicio">
+
+                <div class="modal-card" style="max-width:540px">
+
+                    <div class="modal-header">
+                        <div class="modal-title">
+                            Editar servicio
+                        </div>
+                        <button type="button" class="modal-close-btn" data-modal-close
+                            aria-label="Cerrar">&times;</button>
+                    </div>
+
+                    <form th:action="@{/servicios/{id}/editar(id=${s.id})}" method="post">
+
+                        <div class="modal-body">
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Código del servicio *
+                                </label>
+                                <input type="text" name="codigo" class="form-input" maxlength="50"
+                                    th:value="${s.codigo}" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Nombre del servicio *
+                                </label>
+                                <input type="text" name="nombre" class="form-input" maxlength="150"
+                                    th:value="${s.nombre}" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Descripción
+                                </label>
+                                <textarea name="descripcion" class="form-textarea" rows="4"
+                                    th:text="${s.descripcion}"></textarea>
+                            </div>
+
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-modal-close>
+                                Cancelar
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                Guardar cambios
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+            <!-- ACTIVAR / DESACTIVAR -->
+            <div th:id="${'modalEstadoServicio-' + s.id}" class="modal-overlay" role="dialog" aria-modal="true"
+                aria-label="Cambiar estado del servicio">
+
+                <div class="modal-card" style="max-width:460px">
+
+                    <div class="modal-header">
+                        <div class="modal-title" th:text="${s.estado == 'ACTIVO'
+                             ? 'Desactivar servicio'
+                             : 'Activar servicio'}">
+                            Cambiar estado
+                        </div>
+
+                        <button type="button" class="modal-close-btn" data-modal-close
+                            aria-label="Cerrar">&times;</button>
+                    </div>
+
+                    <div class="modal-body">
+
+                        <p style="font-size:14px;line-height:1.6">
+                            ¿Deseas
+                            <span th:text="${s.estado == 'ACTIVO'
+                            ? 'desactivar' : 'activar'}"></span>
+                            el servicio
+                            <strong th:text="${s.nombre}"></strong>?
+                        </p>
+
+                        <div th:if="${s.estado == 'ACTIVO'}" style="background:#fffbeb;
+                                border:1px solid #fde68a;
+                                color:#92400e;
+                                border-radius:9px;
+                                padding:14px;
+                                margin-top:16px;
+                                font-size:13px;
+                                line-height:1.5">
+
+                            El servicio conservará los contratos
+                            y registros existentes, pero dejará
+                            de estar disponible para nuevas contrataciones.
+
+                        </div>
+
+                    </div>
+
+                    <form th:action="@{/servicios/{id}/estado(id=${s.id})}" method="post">
+
+                        <input type="hidden" name="activo" th:value="${s.estado != 'ACTIVO'}">
+
+                        <div class="modal-footer">
+
+                            <button type="button" class="btn btn-secondary" data-modal-close>
+                                Cancelar
+                            </button>
+
+                            <button type="submit" th:class="${s.estado == 'ACTIVO'
+                                    ? 'btn btn-danger'
+                                    : 'btn btn-primary'}" th:text="${s.estado == 'ACTIVO'
+                                    ? 'Desactivar servicio'
+                                    : 'Activar servicio'}">
+                                Confirmar
+                            </button>
+
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </th:block>
+
+    </section>
+</body>
+
+</html>

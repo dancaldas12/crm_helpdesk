@@ -7,6 +7,7 @@ import com.serviclient.crm.entity.enums.CategoriaTicket;
 import com.serviclient.crm.entity.enums.EstadoEncuestaCsat;
 import com.serviclient.crm.entity.enums.EstadoTicket;
 import com.serviclient.crm.entity.enums.PrioridadTicket;
+import com.serviclient.crm.entity.enums.Rol;
 import com.serviclient.crm.entity.enums.TipoMensajeTicket;
 import com.serviclient.crm.repository.CategoriaTicketRepository;
 import com.serviclient.crm.repository.ClienteRepository;
@@ -207,6 +208,11 @@ public class TicketService implements ITicketService {
       if (agente.getEmpresa() == null || !empresaId.equals(agente.getEmpresa().getId())) {
         throw new IllegalArgumentException("El agente no pertenece a la empresa actual.");
       }
+      if (agente.getRolEntity() == null
+          || agente.getRol() != Rol.AGENTE
+          || !Boolean.TRUE.equals(agente.getActivo())) {
+        throw new IllegalArgumentException("Solo se pueden asignar agentes de soporte activos.");
+      }
     }
 
     // Generar número de ticket TK-xxxx
@@ -360,6 +366,12 @@ public class TicketService implements ITicketService {
     // Evitar asignar agentes de otra empresa.
     if (!ticket.getEmpresa().getId().equals(nuevoAgente.getEmpresa().getId())) {
       throw new IllegalArgumentException("El agente no pertenece a la empresa del ticket.");
+    }
+
+    if (nuevoAgente.getRolEntity() == null
+        || nuevoAgente.getRol() != Rol.AGENTE
+        || !Boolean.TRUE.equals(nuevoAgente.getActivo())) {
+      throw new IllegalArgumentException("Solo se pueden asignar agentes de soporte activos.");
     }
 
     // Evitar notificaciones si el agente no cambió.

@@ -22,6 +22,7 @@ import com.serviclient.crm.service.IClienteService.ResultadoContacto;
 import com.serviclient.crm.service.IClienteService.ResultadoCreacionCliente;
 import com.serviclient.crm.service.IHealthScoreService;
 import com.serviclient.crm.service.IUsuarioService;
+import com.serviclient.crm.service.ServicioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -87,6 +88,7 @@ public class ClienteController {
   private final IHealthScoreService healthScoreService;
   private final IUsuarioService usuarioService;
   private final TicketHistorialRepository ticketHistorialRepository;
+  private final ServicioService servicioService;
 
   // ─────────────────────────────────────────────────────────────────────────
   // LISTADO
@@ -160,6 +162,7 @@ public class ClienteController {
   public String formularioNuevoCliente(
       @AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
     Long empresaId = resolverEmpresaId(userDetails);
+    model.addAttribute("serviciosDisponibles", servicioService.listarActivos(empresaId));
     List<Usuario> usuarios = usuarioService.obtenerTodosPorEmpresa(empresaId);
 
     model.addAttribute("clienteDto", new ClienteDto());
@@ -178,6 +181,7 @@ public class ClienteController {
       Model model,
       RedirectAttributes redirectAttributes) {
     Long empresaId = resolverEmpresaId(userDetails);
+    model.addAttribute("serviciosDisponibles", servicioService.listarActivos(empresaId));
 
     if (bindingResult.hasErrors()) {
       model.addAttribute("usuarios", usuarioService.obtenerTodosPorEmpresa(empresaId));
@@ -235,6 +239,7 @@ public class ClienteController {
       @PathVariable("id") Long id,
       Model model) {
     Long empresaId = resolverEmpresaId(userDetails);
+    cargarServiciosEdicion(empresaId, id, model);
     Cliente cliente = clienteService.obtenerPorIdYEmpresa(id, empresaId);
     ClienteDto dto = clienteService.toDto(cliente);
     List<Usuario> usuarios = usuarioService.obtenerTodosPorEmpresa(empresaId);
@@ -259,6 +264,7 @@ public class ClienteController {
       Model model,
       RedirectAttributes redirectAttributes) {
     Long empresaId = resolverEmpresaId(userDetails);
+    cargarServiciosEdicion(empresaId, id, model);
 
     if (bindingResult.hasErrors()) {
       model.addAttribute("usuarios", usuarioService.obtenerTodosPorEmpresa(empresaId));
@@ -570,5 +576,20 @@ public class ClienteController {
     }
 
     return userDetails.getEmpresaId();
+  }
+
+  private void cargarServiciosEdicion(Long empresaId, Long clienteId, Model model) {
+
+    Cliente cliente = clienteService.obtenerPorIdYEmpresa(clienteId, empresaId);
+
+    Long servicioActualId = clienteService.toDto(cliente).getServicioId();
+
+    model.addAttribute("contratoExistente", servicioActualId != null);
+
+    model.addAttribute(
+        "serviciosDisponibles",
+        servicioService.listar(empresaId).stream()
+            .filter(s -> "ACTIVO".equals(s.getEstado()) || s.getId().equals(servicioActualId))
+            .toList());
   }
 }

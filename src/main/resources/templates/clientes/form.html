@@ -50,14 +50,14 @@
 
                 <!-- Validación -->
                 <div th:if="${#fields.hasErrors('*')}" style="
-              background: #fef3c7;
-              border: 1px solid #fde68a;
-              border-radius: 8px;
-              padding: 12px 16px;
-              margin-bottom: 20px;
-              font-size: 13px;
-              color: #92400e;
-            ">
+                background: #fef3c7;
+                border: 1px solid #fde68a;
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-bottom: 20px;
+                font-size: 13px;
+                color: #92400e;
+                ">
                     <strong>Por favor corrige los errores indicados:</strong>
                     <ul style="margin: 6px 0 0 16px">
                         <li th:each="err : ${#fields.allErrors()}" th:text="${err}"></li>
@@ -66,18 +66,18 @@
 
                 <!-- Sección: Información Comercial -->
                 <div style="
-              margin-bottom: 24px;
-              padding-bottom: 18px;
-              border-bottom: 1px solid var(--color-border-light);
-            ">
+                margin-bottom: 24px;
+                padding-bottom: 18px;
+                border-bottom: 1px solid var(--color-border-light);
+                ">
                     <h3 style="
-                font-size: 13px;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.08em;
-                color: var(--color-text-muted);
-                margin-bottom: 16px;
-              ">
+                        font-size: 13px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                        color: var(--color-text-muted);
+                        margin-bottom: 16px;
+                    ">
                         Información Comercial
                     </h3>
                     <div class="form-row-2">
@@ -98,20 +98,24 @@
                                 placeholder="Ej. NovaTech Solutions S.A.C." />
                         </div>
                     </div>
+
                     <div class="form-row-2">
                         <div class="form-group">
                             <label class="form-label">RUC / Identificación Fiscal</label>
                             <input type="text" th:field="*{ruc}" class="form-input" placeholder="20123456789" />
                         </div>
+
                         <div class="form-group">
                             <label class="form-label">Responsable Asignado</label>
                             <select th:field="*{responsableId}" class="form-select">
                                 <option value="">— Sin asignar —</option>
                                 <option th:each="u : ${usuarios}" th:value="${u.id}"
-                                    th:text="${u.nombreCompleto + ' (' + u.rol.descripcion + ')'}"></option>
+                                    th:text="${u.nombreCompleto + ' (' + u.rol.descripcion + ')'}">
+                                </option>
                             </select>
                         </div>
                     </div>
+
                     <div class="form-row-2">
                         <div class="form-group">
                             <label class="form-label">Industria</label>
@@ -166,54 +170,63 @@
 
                 <!-- Sección: Servicio y Contrato -->
                 <div style="
-              margin-bottom: 24px;
-              padding-bottom: 18px;
-              border-bottom: 1px solid var(--color-border-light);
-            ">
+                margin-bottom: 24px;
+                padding-bottom: 18px;
+                border-bottom: 1px solid var(--color-border-light);
+                ">
                     <h3 style="
-                font-size: 13px;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.08em;
-                color: var(--color-text-muted);
-                margin-bottom: 16px;
-              ">
+                        font-size: 13px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                        color: var(--color-text-muted);
+                        margin-bottom: 16px;
+                    ">
                         Servicio y Contrato
                     </h3>
+
                     <div class="form-group">
                         <label class="form-label">Servicio Contratado
-                            <span style="color: #dc2626">*</span></label>
-                        <input type="text" th:field="*{servicioContratado}" class="form-input"
-                            placeholder="Ej. SaaS Enterprise, Licencia Standard…" required />
-                        <span th:if="${#fields.hasErrors('servicioContratado')}" th:errors="*{servicioContratado}"
-                            style="
-                  font-size: 12px;
-                  color: #dc2626;
-                  margin-top: 4px;
-                  display: block;
-                "></span>
+                            <span style="color: #dc2626">*</span>
+                        </label>
+
+                        <select th:field="*{servicioId}" class="form-select" required>
+                            <option value="">— Seleccionar servicio —</option>
+                            <option th:each="s : ${serviciosDisponibles}" th:value="${s.id}"
+                                th:text="|${s.nombre} (${s.codigo})|">
+                            </option>
+                        </select>
+
+                        <small th:if="${#lists.isEmpty(serviciosDisponibles)}"
+                            style="display:block;color:#d97706;margin-top:8px;font-size:12px;">
+                            No hay servicios activos disponibles.
+                            <a th:href="@{/servicios}" style="color:#6366f1;font-weight:600;">
+                                Gestionar servicios
+                            </a>
+                        </small>
                     </div>
+
                     <div class="form-row-2">
                         <div class="form-group">
                             <label class="form-label">Fecha de Inicio <span style="color: #dc2626">*</span></label>
                             <input type="date" th:field="*{fechaInicio}" class="form-input" required />
                             <span th:if="${#fields.hasErrors('fechaInicio')}" th:errors="*{fechaInicio}" style="
-                    font-size: 12px;
-                    color: #dc2626;
-                    margin-top: 4px;
-                    display: block;
-                  "></span>
+                                font-size: 12px;
+                                color: #dc2626;
+                                margin-top: 4px;
+                                display: block;
+                            "></span>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Fecha de Renovación
                                 <span style="color: #dc2626">*</span></label>
                             <input type="date" th:field="*{fechaRenovacion}" class="form-input" required />
                             <span th:if="${#fields.hasErrors('fechaRenovacion')}" th:errors="*{fechaRenovacion}" style="
-                    font-size: 12px;
-                    color: #dc2626;
-                    margin-top: 4px;
-                    display: block;
-                  "></span>
+                                font-size: 12px;
+                                color: #dc2626;
+                                margin-top: 4px;
+                                display: block;
+                            "></span>
                         </div>
                     </div>
                 </div>
@@ -221,20 +234,20 @@
                 <!-- Sección: Contacto Principal (solo al crear) -->
                 <div style="margin-bottom: 28px">
                     <h3 style="
-                font-size: 13px;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.08em;
-                color: var(--color-text-muted);
-                margin-bottom: 4px;
-              ">
+                        font-size: 13px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                        color: var(--color-text-muted);
+                        margin-bottom: 4px;
+                    ">
                         Contacto Principal
                     </h3>
                     <p style="
-                font-size: 12px;
-                color: var(--color-text-muted);
-                margin-bottom: 16px;
-              ">
+                        font-size: 12px;
+                        color: var(--color-text-muted);
+                        margin-bottom: 16px;
+                    ">
                         Opcional. Podrás agregar más contactos desde la ficha 360° del
                         cliente.
                     </p>
@@ -275,13 +288,13 @@
 
                 <!-- Acciones -->
                 <div style="
-              display: flex;
-              justify-content: flex-end;
-              gap: 12px;
-              margin-top: 8px;
-              border-top: 1px solid var(--color-border-light);
-              padding-top: 24px;
-            ">
+                display: flex;
+                justify-content: flex-end;
+                gap: 12px;
+                margin-top: 8px;
+                border-top: 1px solid var(--color-border-light);
+                padding-top: 24px;
+                ">
                     <a th:href="@{/clientes}" class="btn btn-secondary">Cancelar</a>
                     <button type="submit" class="btn btn-primary" style="padding: 10px 32px; min-width: 160px">
                         ✚ Crear Cliente
@@ -296,14 +309,14 @@
 
                 <!-- Validación -->
                 <div th:if="${#fields.hasErrors('*')}" style="
-              background: #fef3c7;
-              border: 1px solid #fde68a;
-              border-radius: 8px;
-              padding: 12px 16px;
-              margin-bottom: 20px;
-              font-size: 13px;
-              color: #92400e;
-            ">
+                background: #fef3c7;
+                border: 1px solid #fde68a;
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-bottom: 20px;
+                font-size: 13px;
+                color: #92400e;
+                ">
                     <strong>Por favor corrige los errores indicados:</strong>
                     <ul style="margin: 6px 0 0 16px">
                         <li th:each="err : ${#fields.allErrors()}" th:text="${err}"></li>
@@ -312,18 +325,18 @@
 
                 <!-- Sección: Información Comercial -->
                 <div style="
-              margin-bottom: 24px;
-              padding-bottom: 18px;
-              border-bottom: 1px solid var(--color-border-light);
-            ">
+                margin-bottom: 24px;
+                padding-bottom: 18px;
+                border-bottom: 1px solid var(--color-border-light);
+                ">
                     <h3 style="
-                font-size: 13px;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.08em;
-                color: var(--color-text-muted);
-                margin-bottom: 16px;
-              ">
+                        font-size: 13px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                        color: var(--color-text-muted);
+                        margin-bottom: 16px;
+                    ">
                         Información Comercial
                     </h3>
                     <div class="form-row-2">
@@ -332,11 +345,11 @@
                             <input type="text" th:field="*{nombreComercial}" class="form-input"
                                 placeholder="Ej. NovaTech Solutions" required />
                             <span th:if="${#fields.hasErrors('nombreComercial')}" th:errors="*{nombreComercial}" style="
-                    font-size: 12px;
-                    color: #dc2626;
-                    margin-top: 4px;
-                    display: block;
-                  "></span>
+                                font-size: 12px;
+                                color: #dc2626;
+                                margin-top: 4px;
+                                display: block;
+                            "></span>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Razón Social</label>
@@ -413,50 +426,67 @@
                 <!-- Sección: Servicio y Contrato -->
                 <div style="margin-bottom: 28px">
                     <h3 style="
-                font-size: 13px;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.08em;
-                color: var(--color-text-muted);
-                margin-bottom: 16px;
-              ">
+                        font-size: 13px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                        color: var(--color-text-muted);
+                        margin-bottom: 16px;
+                    ">
                         Servicio y Contrato
                     </h3>
+
                     <div class="form-group">
+
                         <label class="form-label">Servicio Contratado
-                            <span style="color: #dc2626">*</span></label>
-                        <input type="text" th:field="*{servicioContratado}" class="form-input"
-                            placeholder="Ej. SaaS Enterprise, Licencia Standard…" required />
-                        <span th:if="${#fields.hasErrors('servicioContratado')}" th:errors="*{servicioContratado}"
-                            style="
-                  font-size: 12px;
-                  color: #dc2626;
-                  margin-top: 4px;
-                  display: block;
-                "></span>
+                            <span style="color:#dc2626">*</span>
+                        </label>
+
+                        <select th:field="*{servicioId}" class="form-select" required>
+
+                            <option value="">— Seleccionar servicio —</option>
+
+                            <option th:each="s : ${serviciosDisponibles}" th:value="${s.id}" th:text="${s.nombre + ' (' + s.codigo + ')'
+                                 + (s.estado == 'ACTIVO' ? '' : ' - Inactivo')}">
+                            </option>
+
+                        </select>
+
+                        <span th:if="${#fields.hasErrors('servicioId')}" th:errors="*{servicioId}"
+                            style="color:#dc2626;font-size:12px;">
+                        </span>
+
                     </div>
+
                     <div class="form-row-2">
                         <div class="form-group">
                             <label class="form-label">Fecha de Inicio <span style="color: #dc2626">*</span></label>
-                            <input type="date" th:field="*{fechaInicio}" class="form-input" required />
+                            <input type="date" th:field="*{fechaInicio}" class="form-input"
+                                th:readonly="${contratoExistente}" required />
                         </div>
                         <div class="form-group">
                             <label class="form-label">Fecha de Renovación
                                 <span style="color: #dc2626">*</span></label>
-                            <input type="date" th:field="*{fechaRenovacion}" class="form-input" required />
+                            <input type="date" th:field="*{fechaRenovacion}" class="form-input"
+                                th:readonly="${contratoExistente}" required />
                         </div>
+                        <small th:if="${contratoExistente}"
+                            style="display:block;color:#64748b;font-size:12px;margin-top:8px;">
+                            El vencimiento del contrato se gestiona desde el módulo
+                            de Renovaciones.
+                        </small>
                     </div>
                 </div>
 
                 <!-- Acciones -->
                 <div style="
-              display: flex;
-              justify-content: flex-end;
-              gap: 12px;
-              margin-top: 8px;
-              border-top: 1px solid var(--color-border-light);
-              padding-top: 24px;
-            ">
+                display: flex;
+                justify-content: flex-end;
+                gap: 12px;
+                margin-top: 8px;
+                border-top: 1px solid var(--color-border-light);
+                padding-top: 24px;
+                ">
                     <a th:href="@{/clientes}" class="btn btn-secondary">Cancelar</a>
                     <button type="submit" class="btn btn-primary" style="padding: 10px 32px; min-width: 160px">
                         💾 Guardar Cambios

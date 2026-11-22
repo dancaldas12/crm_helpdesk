@@ -8,10 +8,11 @@ import lombok.*;
 import org.springframework.format.annotation.DateTimeFormat;
 
 /**
- * Objeto de transferencia de datos (DTO) para los formularios de alta y actualización de clientes B2B.
- * <p>
- * Incluye campos del cliente corporativo, fechas de contrato y los datos opcionales para el contacto principal.
- * </p>
+ * Objeto de transferencia de datos (DTO) para los formularios de alta y actualización de clientes
+ * B2B.
+ *
+ * <p>Incluye campos del cliente corporativo, fechas de contrato y los datos opcionales para el
+ * contacto principal.
  *
  * @author ServiClient Dev Team
  * @version 1.0.0
@@ -40,8 +41,10 @@ public class ClienteDto {
 
   private Long responsableId;
 
-  @NotBlank(message = "El servicio contratado es obligatorio")
   private String servicioContratado;
+
+  @NotNull(message = "Debes seleccionar un servicio")
+  private Long servicioId;
 
   @Builder.Default private EstadoCliente estado = EstadoCliente.SALUDABLE;
 

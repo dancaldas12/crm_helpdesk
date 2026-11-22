@@ -274,6 +274,8 @@ public class SecurityConfig {
 
                                 .requestMatchers("/agentes/**")
                                 .hasRole("ADMIN")
+                                .requestMatchers("/servicios", "/servicios/**")
+                                .hasRole("ADMIN")
                                 .anyRequest()
                                 .authenticated())
                 .formLogin(

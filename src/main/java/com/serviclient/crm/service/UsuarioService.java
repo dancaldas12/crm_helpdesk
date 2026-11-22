@@ -134,6 +134,18 @@ public class UsuarioService implements IUsuarioService {
         return usuario;
     }
 
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Usuario> obtenerAgentesSoporteActivos(Long empresaId) {
+        return usuarioRepository.findByEmpresaId(empresaId).stream()
+                .filter(u -> u.getRolEntity() != null)
+                .filter(u -> u.getRol() == Rol.AGENTE)
+                .filter(u -> Boolean.TRUE.equals(u.getActivo()))
+                .toList();
+    }
+
+
     /**
      * Registra un nuevo agente o supervisor para la empresa especificada y genera una contraseña temporal.
      *
