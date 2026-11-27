@@ -184,7 +184,7 @@ public class SecurityConfig {
                             .includeSubDomains(false)
                     );
                     headers.addHeaderWriter(new StaticHeadersWriter(
-                            "Content-Security-Policy-Report-Only", CSP_REPORT_ONLY_POLICY
+                            "Content-Security-Policy", CSP_REPORT_ONLY_POLICY
                     ));
                 });
 
@@ -222,7 +222,7 @@ public class SecurityConfig {
                             .includeSubDomains(false)
                     );
                     headers.addHeaderWriter(new StaticHeadersWriter(
-                            "Content-Security-Policy-Report-Only", CSP_REPORT_ONLY_POLICY
+                            "Content-Security-Policy", CSP_REPORT_ONLY_POLICY
                     ));
                 })
                 .authorizeHttpRequests(
