@@ -146,7 +146,7 @@
                             </div>
                             <p class="text-sm font-bold text-slate-800" id="textoSubida">Arrastra archivos aquí o haz
                                 clic para seleccionar</p>
-                            <p class="text-xs text-slate-400 mt-1">Formatos permitidos: PNG, JPG, PDF, TXT (Máx. 10MB
+                            <p class="text-xs text-slate-400 mt-1">Formatos permitidos: PNG, JPG, PDF, TXT (Máx. 20MB
                                 por archivo)</p>
                             <div id="listaArchivos" class="mt-3 flex flex-wrap gap-2 justify-center"></div>
                         </div>
@@ -170,6 +170,33 @@
 
         </main>
     </div>
+
+
+    <!-- MODAL DE ARCHIVO NO PERMITIDO -->
+    <div id="modalArchivoInvalido"
+        class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+
+        <div role="alertdialog" aria-modal="true" aria-labelledby="tituloArchivoInvalido"
+            aria-describedby="mensajeArchivoInvalido"
+            class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 text-center">
+
+            <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center">
+                <i class="fa-solid fa-file-circle-exclamation text-3xl"></i>
+            </div>
+
+            <h3 id="tituloArchivoInvalido" class="text-xl font-bold text-slate-900 mb-2">
+                Archivo demasiado grande
+            </h3>
+
+            <p id="mensajeArchivoInvalido" class="text-sm text-slate-500 mb-5 break-words"></p>
+
+            <button type="button" id="cerrarModalArchivo"
+                class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition">
+                Entendido
+            </button>
+        </div>
+    </div>
+
 
     <!-- MODAL DE CONFIRMACIÓN FLOTANTE (CREACIÓN DE TICKET) -->
     <div id="modalExito" th:if="${ticketCreadoExito}"
@@ -234,9 +261,53 @@
         const lista = document.getElementById('listaArchivos');
         const texto = document.getElementById('textoSubida');
 
+        const modalArchivo = document.getElementById('modalArchivoInvalido');
+        const mensajeArchivo = document.getElementById('mensajeArchivoInvalido');
+        const cerrarModalArchivo = document.getElementById('cerrarModalArchivo');
+
+        function mostrarModalArchivo(mensaje) {
+            mensajeArchivo.textContent = mensaje;
+            modalArchivo.classList.remove('hidden');
+            cerrarModalArchivo.focus();
+        }
+
+        function ocultarModalArchivo() {
+            modalArchivo.classList.add('hidden');
+            input.focus();
+        }
+
+        cerrarModalArchivo.addEventListener('click', ocultarModalArchivo);
+
+
         function actualizarListaArchivos() {
             if (!input || !lista || !texto) return;
             lista.innerHTML = '';
+
+            const MAX_ARCHIVO = 20 * 1024 * 1024;
+            const MAX_TOTAL = 45 * 1024 * 1024;
+            const archivos = Array.from(input.files || []);
+
+            const archivoGrande = archivos.find(a => a.size > MAX_ARCHIVO);
+            const total = archivos.reduce((suma, a) => suma + a.size, 0);
+
+
+            if (archivoGrande || total > MAX_TOTAL) {
+                const mensaje = archivoGrande
+                    ? `El archivo "${archivoGrande.name}" supera los 20 MB permitidos. Selecciona uno más pequeño.`
+                    : 'Los archivos seleccionados superan el límite total permitido de 45 MB.';
+
+                input.value = '';
+                input.setCustomValidity('');
+                lista.innerHTML = '';
+                texto.innerText = 'Arrastra archivos aquí o haz clic para seleccionar';
+
+                mostrarModalArchivo(mensaje);
+                return;
+            }
+
+
+            input.setCustomValidity('');
+
             if (input.files && input.files.length > 0) {
                 texto.innerText = `${input.files.length} archivo(s) seleccionado(s)`;
                 Array.from(input.files).forEach(file => {

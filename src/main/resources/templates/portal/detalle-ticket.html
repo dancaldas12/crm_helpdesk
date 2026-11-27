@@ -111,13 +111,13 @@
             </section>
 
             <!-- ALERTAS DE COMENTARIO ENVIADO O ERROR -->
-            <div th:if="${mensajeExito}" role="alert"
+            <div th:if="${mensajeExito}" data-chat-feedback="success" role="alert"
                 class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium flex items-center gap-3">
                 <i class="fa-solid fa-circle-check text-base text-emerald-500"></i>
                 <span th:text="${mensajeExito}">Tu comentario fue enviado correctamente.</span>
             </div>
 
-            <div th:if="${errorMessage}" role="alert"
+            <div th:if="${errorMessage}" data-chat-feedback="error" role="alert"
                 class="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium flex items-center gap-3">
                 <i class="fa-solid fa-circle-exclamation text-base text-red-500"></i>
                 <span th:text="${errorMessage}">Error al enviar el comentario.</span>
@@ -136,13 +136,14 @@
                                 <span class="text-indigo-600 text-base"><i class="fa-regular fa-comments"></i></span>
                                 <h2 class="text-sm font-bold text-slate-900">Conversación con soporte</h2>
                             </div>
-                            <span class="text-xs text-slate-400"
+                            <span id="chatContador" class="text-xs text-slate-400"
                                 th:text="${(ticket.mensajes != null ? ticket.mensajes.size() : 0) + ' mensajes intercambiados'}">0
                                 mensajes intercambiados</span>
                         </div>
 
                         <!-- Mensajes -->
-                        <div class="p-6 space-y-6">
+                        <div id="chatMensajes" class="p-6 space-y-6" style="max-height: 400px; min-height: 230px;
+                                overflow-y: auto; overscroll-behavior: contain;">
 
                             <!-- Descripción inicial como primer mensaje si no hay mensajes en la lista -->
                             <div th:if="${#lists.isEmpty(ticket.mensajes)}" class="flex items-start gap-3.5">
@@ -357,6 +358,40 @@
                                 </a>
                             </div>
                         </div>
+
+
+                        <!-- Subir nuevos adjuntos a un ticket existente -->
+                        <form id="formSubirAdjuntos"
+                            th:if="${ticket.estado == null or ticket.estado.name() != 'CERRADO'}"
+                            th:action="@{/portal/tickets/{id}/adjuntos(id=${ticket.id})}" method="post"
+                            enctype="multipart/form-data" class="pt-4 border-t border-slate-100 space-y-2">
+
+                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}"
+                                th:value="${_csrf.token}" />
+
+                            <input type="file" id="adjuntosNuevos" name="archivos" multiple
+                                accept=".pdf,.png,.jpg,.jpeg,.txt" class="sr-only" />
+
+                            <label for="adjuntosNuevos" id="botonAgregarAdjuntos" class="flex items-center justify-center gap-2 w-full py-2.5 px-3
+                                    rounded-xl border border-indigo-200 bg-indigo-50
+                                    text-indigo-700 text-xs font-semibold cursor-pointer
+                                    hover:bg-indigo-100 transition">
+                                <i class="fa-solid fa-plus"></i>
+                                <span id="textoBotonAdjuntos">Agregar archivos</span>
+                            </label>
+
+                            <p class="text-[11px] text-slate-400 text-center">
+                                PDF, PNG, JPG o TXT · Máx. 20 MB por archivo
+                            </p>
+
+
+                            <p id="errorAdjuntosTicket" role="alert"
+                                class="hidden rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 text-center">
+                            </p>
+
+                        </form>
+
+
                     </div>
 
                     <!-- 3. HISTORIAL DEL TICKET -->
@@ -478,6 +513,56 @@
         abrirPassword();
         /*[/]*/
     </script>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('formSubirAdjuntos');
+            if (!form) return;
+
+            const input = document.getElementById('adjuntosNuevos');
+            const error = document.getElementById('errorAdjuntosTicket');
+            const texto = document.getElementById('textoBotonAdjuntos');
+
+            input.addEventListener('change', () => {
+                const archivos = Array.from(input.files || []);
+                if (!archivos.length) return;
+
+                const maxArchivo = 20 * 1024 * 1024;
+                const maxTotal = 45 * 1024 * 1024;
+                const total = archivos.reduce((s, a) => s + a.size, 0);
+
+                const grande = archivos.find(a => a.size > maxArchivo);
+                const formatoInvalido = archivos.find(a =>
+                    !/\.(pdf|png|jpe?g|txt)$/i.test(a.name)
+                );
+
+                let mensaje = '';
+
+                if (grande) {
+                    mensaje = 'El archivo supera los 20 MB permitidos. Selecciona uno más pequeño.';
+                } else if (total > maxTotal) {
+                    mensaje = 'Los archivos superan el límite total de 45 MB.';
+                } else if (formatoInvalido) {
+                    mensaje = 'Formato no permitido. Usa PDF, PNG, JPG o TXT.';
+                }
+
+                if (mensaje) {
+                    error.textContent = mensaje;
+                    error.classList.remove('hidden');
+                    input.value = '';
+                    return;
+                }
+
+                error.classList.add('hidden');
+                texto.textContent = 'Subiendo archivos...';
+
+                form.requestSubmit();
+            });
+        });
+    </script>
+
+    <script defer th:src="@{/js/chat-auto.js(v=4)}"></script>
 </body>
 
 </html>

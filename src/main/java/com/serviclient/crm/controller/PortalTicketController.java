@@ -44,10 +44,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 /**
  * Controlador MVC del Portal de Clientes para la gestión de tickets.
  *
- * <p>Permite a los clientes autenticados mediante {@link CuentaPortal} crear
- * nuevas incidencias adjuntando archivos, visualizar adjuntos y consultar el detalle de sus tickets.
+ * <p>Permite a los clientes autenticados mediante {@link CuentaPortal} crear nuevas incidencias
+ * adjuntando archivos, visualizar adjuntos y consultar el detalle de sus tickets.
  *
  * <p><b>Rutas expuestas:</b>
+ *
  * <pre>
  * GET  /portal/tickets/nuevo                           → Formulario de nueva incidencia
  * POST /portal/tickets                                 → Registrar nueva incidencia con adjuntos
@@ -68,238 +69,267 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Tag(name = "Portal de Clientes", description = "Gestión de incidencias del portal")
 public class PortalTicketController {
 
-    private final IPortalTicketService portalTicketService;
-    private final ITicketService ticketService;
-    private final CuentaPortalRepository cuentaPortalRepository;
+  private final IPortalTicketService portalTicketService;
+  private final ITicketService ticketService;
+  private final CuentaPortalRepository cuentaPortalRepository;
 
-    /**
-     * Muestra el formulario para que el cliente registre una nueva incidencia.
-     */
-    @Operation(summary = "Formulario de nueva incidencia")
-    @ApiResponse(responseCode = "200", description = "Formulario renderizado")
-    @GetMapping("/nuevo")
-    public String nuevaIncidencia(Model model, Principal principal) {
-        CuentaPortal cuenta = obtenerCuenta(principal);
-        cargarDatosUsuarioAutenticado(model, cuenta);
+  /** Muestra el formulario para que el cliente registre una nueva incidencia. */
+  @Operation(summary = "Formulario de nueva incidencia")
+  @ApiResponse(responseCode = "200", description = "Formulario renderizado")
+  @GetMapping("/nuevo")
+  public String nuevaIncidencia(Model model, Principal principal) {
+    CuentaPortal cuenta = obtenerCuenta(principal);
+    cargarDatosUsuarioAutenticado(model, cuenta);
 
-        if (!model.containsAttribute("ticketForm")) {
-            model.addAttribute("ticketForm", new PortalTicketDto());
-        }
-        model.addAttribute("categorias", CategoriaTicket.values());
-        model.addAttribute("prioridades", PrioridadTicket.values());
+    if (!model.containsAttribute("ticketForm")) {
+      model.addAttribute("ticketForm", new PortalTicketDto());
+    }
+    model.addAttribute("categorias", CategoriaTicket.values());
+    model.addAttribute("prioridades", PrioridadTicket.values());
 
-        return "portal/nueva-incidencia";
+    return "portal/nueva-incidencia";
+  }
+
+  /**
+   * Procesa el formulario, delega la persistencia del ticket y archivos a PortalTicketService, y
+   * prepara los datos para el modal de confirmación.
+   */
+  @Operation(summary = "Registrar nueva incidencia")
+  @ApiResponse(responseCode = "302", description = "Redirección con modal de éxito")
+  @PostMapping
+  public String registrarIncidencia(
+      @Valid @ModelAttribute("ticketForm") PortalTicketDto ticketForm,
+      BindingResult bindingResult,
+      @RequestParam(value = "archivos", required = false) MultipartFile[] archivos,
+      Model model,
+      Principal principal,
+      RedirectAttributes redirectAttributes) {
+
+    CuentaPortal cuenta = obtenerCuenta(principal);
+
+    if (bindingResult.hasErrors()) {
+      cargarDatosUsuarioAutenticado(model, cuenta);
+      model.addAttribute("categorias", CategoriaTicket.values());
+      model.addAttribute("prioridades", PrioridadTicket.values());
+      model.addAttribute("errorMessage", "Revisa los campos obligatorios e inténtalo nuevamente.");
+      return "portal/nueva-incidencia";
     }
 
-    /**
-     * Procesa el formulario, delega la persistencia del ticket y archivos a PortalTicketService,
-     * y prepara los datos para el modal de confirmación.
-     */
-    @Operation(summary = "Registrar nueva incidencia")
-    @ApiResponse(responseCode = "302", description = "Redirección con modal de éxito")
-    @PostMapping
-    public String registrarIncidencia(
-            @Valid @ModelAttribute("ticketForm") PortalTicketDto ticketForm,
-            BindingResult bindingResult,
-            @RequestParam(value = "archivos", required = false) MultipartFile[] archivos,
-            Model model,
-            Principal principal,
-            RedirectAttributes redirectAttributes) {
+    try {
+      Ticket ticketCreado =
+          portalTicketService.crearTicketDesdePortal(cuenta, ticketForm, archivos);
 
-        CuentaPortal cuenta = obtenerCuenta(principal);
+      redirectAttributes.addFlashAttribute("ticketCreadoExito", true);
+      redirectAttributes.addFlashAttribute("ticketId", ticketCreado.getId());
+      redirectAttributes.addFlashAttribute("ticketNumero", ticketCreado.getNumeroTicket());
+      redirectAttributes.addFlashAttribute("ticketAsunto", ticketCreado.getAsunto());
+      redirectAttributes.addFlashAttribute(
+          "ticketPrioridad",
+          ticketCreado.getPrioridad() != null
+              ? ticketCreado.getPrioridad().getEtiqueta()
+              : "Media");
+      redirectAttributes.addFlashAttribute(
+          "ticketEstado",
+          ticketCreado.getEstado() != null
+              ? ticketCreado.getEstado().getEtiqueta()
+              : "Abierto (En espera de asignación)");
 
-        if (bindingResult.hasErrors()) {
-            cargarDatosUsuarioAutenticado(model, cuenta);
-            model.addAttribute("categorias", CategoriaTicket.values());
-            model.addAttribute("prioridades", PrioridadTicket.values());
-            model.addAttribute("errorMessage",
-                    "Revisa los campos obligatorios e inténtalo nuevamente.");
-            return "portal/nueva-incidencia";
-        }
+    } catch (IllegalArgumentException | IllegalStateException | IOException ex) {
+      log.error("Error al procesar ticket o archivos adjuntos desde portal", ex);
+      cargarDatosUsuarioAutenticado(model, cuenta);
+      model.addAttribute("categorias", CategoriaTicket.values());
+      model.addAttribute("prioridades", PrioridadTicket.values());
+      model.addAttribute(
+          "errorMessage",
+          "No se pudo completar el envío de la incidencia. Verifica los datos y archivos "
+              + "e inténtalo nuevamente.");
+      return "portal/nueva-incidencia";
+    }
 
+    return "redirect:/portal/tickets/nuevo";
+  }
+
+  /** Muestra el detalle de un ticket específico del cliente autenticado. */
+  @Operation(summary = "Detalle del ticket del cliente")
+  @ApiResponse(responseCode = "200", description = "Ticket encontrado")
+  @ApiResponse(responseCode = "404", description = "Ticket no encontrado")
+  @GetMapping("/{id}")
+  public String detalleTicket(
+      @Parameter(description = "ID del ticket") @PathVariable Long id,
+      Model model,
+      Principal principal) {
+
+    CuentaPortal cuenta = obtenerCuenta(principal);
+
+    Long clienteId = cuenta.getContacto().getCliente().getId();
+    Long empresaId = cuenta.getContacto().getCliente().getEmpresa().getId();
+
+    Ticket ticket = ticketService.obtenerPorIdYEmpresa(id, empresaId);
+
+    if (!clienteId.equals(ticket.getCliente().getId())) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket no encontrado.");
+    }
+
+    cargarDatosUsuarioAutenticado(model, cuenta);
+    model.addAttribute("ticket", ticket);
+
+    return "portal/detalle-ticket";
+  }
+
+  /** Registra un nuevo comentario o respuesta del cliente en un ticket existente. */
+  @Operation(summary = "Agregar comentario al ticket desde el portal")
+  @ApiResponse(responseCode = "302", description = "Comentario registrado y redirección al detalle")
+  @PostMapping("/{id}/mensajes")
+  public String agregarComentario(
+      @PathVariable Long id,
+      @RequestParam("contenido") String contenido,
+      Principal principal,
+      RedirectAttributes redirectAttributes) {
+
+    CuentaPortal cuenta = obtenerCuenta(principal);
+
+    try {
+      portalTicketService.agregarComentarioDesdePortal(id, contenido, cuenta);
+      redirectAttributes.addFlashAttribute(
+          "mensajeExito", "Tu comentario fue enviado correctamente.");
+    } catch (IllegalArgumentException | IllegalStateException ex) {
+      log.warn("Error al registrar comentario en ticket id={}: {}", id, ex.getMessage());
+      redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+    }
+
+    return "redirect:/portal/tickets/" + id;
+  }
+
+  @PostMapping("/{id}/adjuntos")
+  public String agregarAdjuntos(
+      @PathVariable Long id,
+      @RequestParam("archivos") MultipartFile[] archivos,
+      Principal principal,
+      RedirectAttributes redirectAttributes) {
+
+    CuentaPortal cuenta = obtenerCuenta(principal);
+
+    try {
+      portalTicketService.agregarAdjuntosDesdePortal(id, archivos, cuenta);
+
+      redirectAttributes.addFlashAttribute(
+          "mensajeExito", "Los archivos se adjuntaron correctamente.");
+
+    } catch (IllegalArgumentException | IllegalStateException | IOException ex) {
+
+      log.warn("Error al adjuntar archivos al ticket id={}", id, ex);
+
+      redirectAttributes.addFlashAttribute(
+          "errorMessage",
+          "No se pudieron adjuntar los archivos. " + "Comprueba el tamaño y el formato.");
+    }
+
+    return "redirect:/portal/tickets/" + id;
+  }
+
+  /**
+   * Transmite el archivo adjunto almacenado en el disco para su descarga o previsualización en el
+   * navegador.
+   */
+  @Operation(summary = "Descargar o visualizar archivo adjunto del ticket")
+  @ApiResponse(responseCode = "200", description = "Archivo binario transmitido con éxito")
+  @ApiResponse(responseCode = "404", description = "Ticket o archivo adjunto no encontrado")
+  @GetMapping("/{ticketId}/adjuntos/{adjuntoId}")
+  public ResponseEntity<Resource> descargarAdjunto(
+      @PathVariable Long ticketId, @PathVariable Long adjuntoId, Principal principal) {
+
+    CuentaPortal cuenta = obtenerCuenta(principal);
+    Long clienteId = cuenta.getContacto().getCliente().getId();
+    Long empresaId = cuenta.getContacto().getCliente().getEmpresa().getId();
+
+    Ticket ticket = ticketService.obtenerPorIdYEmpresa(ticketId, empresaId);
+
+    if (!clienteId.equals(ticket.getCliente().getId())) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket no encontrado.");
+    }
+
+    TicketAdjunto adjunto =
+        ticket.getAdjuntos().stream()
+            .filter(a -> a.getId().equals(adjuntoId))
+            .findFirst()
+            .orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Adjunto no encontrado."));
+
+    try {
+      Path rutaArchivo = Paths.get(adjunto.getUrlArchivo());
+      Resource recurso = new UrlResource(rutaArchivo.toUri());
+
+      if (!recurso.exists() || !recurso.isReadable()) {
+        throw new ResponseStatusException(
+            HttpStatus.NOT_FOUND, "El archivo físico no está disponible en el servidor.");
+      }
+
+      MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+      if (adjunto.getTipoArchivo() != null && !adjunto.getTipoArchivo().isBlank()) {
         try {
-            Ticket ticketCreado = portalTicketService.crearTicketDesdePortal(cuenta, ticketForm, archivos);
-
-            redirectAttributes.addFlashAttribute("ticketCreadoExito", true);
-            redirectAttributes.addFlashAttribute("ticketId", ticketCreado.getId());
-            redirectAttributes.addFlashAttribute("ticketNumero", ticketCreado.getNumeroTicket());
-            redirectAttributes.addFlashAttribute("ticketAsunto", ticketCreado.getAsunto());
-            redirectAttributes.addFlashAttribute("ticketPrioridad", 
-                    ticketCreado.getPrioridad() != null ? ticketCreado.getPrioridad().getEtiqueta() : "Media");
-            redirectAttributes.addFlashAttribute("ticketEstado", 
-                    ticketCreado.getEstado() != null ? ticketCreado.getEstado().getEtiqueta() : "Abierto (En espera de asignación)");
-
-        } catch (IllegalArgumentException | IllegalStateException | IOException ex) {
-            log.error("Error al procesar ticket o archivos adjuntos desde portal", ex);
-            cargarDatosUsuarioAutenticado(model, cuenta);
-            model.addAttribute("categorias", CategoriaTicket.values());
-            model.addAttribute("prioridades", PrioridadTicket.values());
-            model.addAttribute("errorMessage",
-                    "No se pudo completar el envío de la incidencia. Verifica los datos y archivos " +
-                    "e inténtalo nuevamente.");
-            return "portal/nueva-incidencia";
+          mediaType = MediaType.parseMediaType(adjunto.getTipoArchivo());
+        } catch (Exception ignored) {
         }
+      }
 
-        return "redirect:/portal/tickets/nuevo";
+      return ResponseEntity.ok()
+          .contentType(mediaType)
+          .header(
+              HttpHeaders.CONTENT_DISPOSITION,
+              "inline; filename=\"" + adjunto.getNombreArchivo() + "\"")
+          .body(recurso);
+
+    } catch (Exception ex) {
+      log.error("Error al leer el archivo adjunto id={}", adjuntoId, ex);
+      throw new ResponseStatusException(
+          HttpStatus.INTERNAL_SERVER_ERROR, "Error al servir el archivo adjunto.");
+    }
+  }
+
+  /** Obtiene la cuenta de portal activa a partir del principal autenticado. */
+  private CuentaPortal obtenerCuenta(Principal principal) {
+    if (principal == null) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN);
     }
 
-    /**
-     * Muestra el detalle de un ticket específico del cliente autenticado.
-     */
-    @Operation(summary = "Detalle del ticket del cliente")
-    @ApiResponse(responseCode = "200", description = "Ticket encontrado")
-    @ApiResponse(responseCode = "404", description = "Ticket no encontrado")
-    @GetMapping("/{id}")
-    public String detalleTicket(
-            @Parameter(description = "ID del ticket")
-            @PathVariable Long id,
-            Model model,
-            Principal principal) {
+    CuentaPortal cuenta =
+        cuentaPortalRepository
+            .findByEmail(principal.getName())
+            .filter(CuentaPortal::estaActiva)
+            .orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Cuenta no disponible."));
 
-        CuentaPortal cuenta = obtenerCuenta(principal);
-
-        Long clienteId = cuenta.getContacto().getCliente().getId();
-        Long empresaId = cuenta.getContacto().getCliente().getEmpresa().getId();
-
-        Ticket ticket = ticketService.obtenerPorIdYEmpresa(id, empresaId);
-
-        if (!clienteId.equals(ticket.getCliente().getId())) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "Ticket no encontrado.");
-        }
-
-        cargarDatosUsuarioAutenticado(model, cuenta);
-        model.addAttribute("ticket", ticket);
-
-        return "portal/detalle-ticket";
+    if (cuenta.getContacto() == null || cuenta.getContacto().getCliente() == null) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cliente no identificado.");
     }
 
-    /**
-     * Registra un nuevo comentario o respuesta del cliente en un ticket existente.
-     */
-    @Operation(summary = "Agregar comentario al ticket desde el portal")
-    @ApiResponse(responseCode = "302", description = "Comentario registrado y redirección al detalle")
-    @PostMapping("/{id}/mensajes")
-    public String agregarComentario(
-            @PathVariable Long id,
-            @RequestParam("contenido") String contenido,
-            Principal principal,
-            RedirectAttributes redirectAttributes) {
+    return cuenta;
+  }
 
-        CuentaPortal cuenta = obtenerCuenta(principal);
+  /** Carga en el modelo los datos del usuario autenticado en el portal. */
+  private void cargarDatosUsuarioAutenticado(Model model, CuentaPortal cuenta) {
+    Contacto contacto = cuenta.getContacto();
 
-        try {
-            portalTicketService.agregarComentarioDesdePortal(id, contenido, cuenta);
-            redirectAttributes.addFlashAttribute("mensajeExito", "Tu comentario fue enviado correctamente.");
-        } catch (IllegalArgumentException | IllegalStateException ex) {
-            log.warn("Error al registrar comentario en ticket id={}: {}", id, ex.getMessage());
-            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
-        }
+    String nombreCompleto =
+        StringUtils.trimToEmpty(
+            StringUtils.joinWith(" ", contacto.getNombre(), contacto.getApellido()));
 
-        return "redirect:/portal/tickets/" + id;
-    }
+    String inicialNombre = StringUtils.left(contacto.getNombre(), 1);
+    String inicialApellido = StringUtils.left(contacto.getApellido(), 1);
+    String iniciales = StringUtils.upperCase(inicialNombre + inicialApellido);
 
-    /**
-     * Transmite el archivo adjunto almacenado en el disco para su descarga o previsualización en el navegador.
-     */
-    @Operation(summary = "Descargar o visualizar archivo adjunto del ticket")
-    @ApiResponse(responseCode = "200", description = "Archivo binario transmitido con éxito")
-    @ApiResponse(responseCode = "404", description = "Ticket o archivo adjunto no encontrado")
-    @GetMapping("/{ticketId}/adjuntos/{adjuntoId}")
-    public ResponseEntity<Resource> descargarAdjunto(
-            @PathVariable Long ticketId,
-            @PathVariable Long adjuntoId,
-            Principal principal) {
+    model.addAttribute(
+        "usuarioNombre", StringUtils.defaultIfBlank(nombreCompleto, cuenta.getEmail()));
 
-        CuentaPortal cuenta = obtenerCuenta(principal);
-        Long clienteId = cuenta.getContacto().getCliente().getId();
-        Long empresaId = cuenta.getContacto().getCliente().getEmpresa().getId();
+    model.addAttribute("usuarioIniciales", StringUtils.defaultIfBlank(iniciales, "U"));
 
-        Ticket ticket = ticketService.obtenerPorIdYEmpresa(ticketId, empresaId);
+    model.addAttribute("usuarioEmail", cuenta.getEmail());
 
-        if (!clienteId.equals(ticket.getCliente().getId())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket no encontrado.");
-        }
+    model.addAttribute(
+        "empresaNombre",
+        StringUtils.defaultIfBlank(contacto.getCliente().getRazonSocial(), "Mi Empresa"));
 
-        TicketAdjunto adjunto = ticket.getAdjuntos().stream()
-                .filter(a -> a.getId().equals(adjuntoId))
-                .findFirst()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Adjunto no encontrado."));
-
-        try {
-            Path rutaArchivo = Paths.get(adjunto.getUrlArchivo());
-            Resource recurso = new UrlResource(rutaArchivo.toUri());
-
-            if (!recurso.exists() || !recurso.isReadable()) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "El archivo físico no está disponible en el servidor.");
-            }
-
-            MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
-            if (adjunto.getTipoArchivo() != null && !adjunto.getTipoArchivo().isBlank()) {
-                try {
-                    mediaType = MediaType.parseMediaType(adjunto.getTipoArchivo());
-                } catch (Exception ignored) {}
-            }
-
-            return ResponseEntity.ok()
-                    .contentType(mediaType)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + adjunto.getNombreArchivo() + "\"")
-                    .body(recurso);
-
-        } catch (Exception ex) {
-            log.error("Error al leer el archivo adjunto id={}", adjuntoId, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al servir el archivo adjunto.");
-        }
-    }
-
-    /**
-     * Obtiene la cuenta de portal activa a partir del principal autenticado.
-     */
-    private CuentaPortal obtenerCuenta(Principal principal) {
-        if (principal == null) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-
-        CuentaPortal cuenta = cuentaPortalRepository
-                .findByEmail(principal.getName())
-                .filter(CuentaPortal::estaActiva)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.FORBIDDEN, "Cuenta no disponible."));
-
-        if (cuenta.getContacto() == null || cuenta.getContacto().getCliente() == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN, "Cliente no identificado.");
-        }
-
-        return cuenta;
-    }
-
-    /**
-     * Carga en el modelo los datos del usuario autenticado en el portal.
-     */
-    private void cargarDatosUsuarioAutenticado(Model model, CuentaPortal cuenta) {
-        Contacto contacto = cuenta.getContacto();
-
-        String nombreCompleto = StringUtils.trimToEmpty(
-                StringUtils.joinWith(" ", contacto.getNombre(), contacto.getApellido())
-        );
-
-        String inicialNombre = StringUtils.left(contacto.getNombre(), 1);
-        String inicialApellido = StringUtils.left(contacto.getApellido(), 1);
-        String iniciales = StringUtils.upperCase(inicialNombre + inicialApellido);
-
-        model.addAttribute("usuarioNombre",
-                StringUtils.defaultIfBlank(nombreCompleto, cuenta.getEmail()));
-
-        model.addAttribute("usuarioIniciales",
-                StringUtils.defaultIfBlank(iniciales, "U"));
-
-        model.addAttribute("usuarioEmail", cuenta.getEmail());
-
-        model.addAttribute("empresaNombre",
-                StringUtils.defaultIfBlank(contacto.getCliente().getRazonSocial(), "Mi Empresa"));
-
-        boolean debeCambiar = Boolean.TRUE.equals(cuenta.getRequiereCambioPassword());
-        model.addAttribute("debeCambiarPassword", debeCambiar);
-    }
+    boolean debeCambiar = Boolean.TRUE.equals(cuenta.getRequiereCambioPassword());
+    model.addAttribute("debeCambiarPassword", debeCambiar);
+  }
 }

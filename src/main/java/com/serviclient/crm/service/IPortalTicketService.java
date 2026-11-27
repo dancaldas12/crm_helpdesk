@@ -7,7 +7,8 @@ import java.io.IOException;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Contrato de servicio para la gestión de incidencias reportadas desde el portal de autoservicio de clientes.
+ * Contrato de servicio para la gestión de incidencias reportadas desde el portal de autoservicio de
+ * clientes.
  *
  * @author ServiClient Dev Team
  * @version 1.0.0
@@ -15,25 +16,32 @@ import org.springframework.web.multipart.MultipartFile;
  */
 public interface IPortalTicketService {
 
-    /**
-     * Registra un nuevo ticket de soporte iniciado por un contacto autenticado en el portal, adjuntando archivos opcionales.
-     *
-     * @param cuentaPortal cuenta del cliente que crea la incidencia
-     * @param dto datos del formulario del ticket (asunto, descripción, categoría, prioridad)
-     * @param archivos archivos adjuntos opcionales cargados en la solicitud
-     * @return entidad {@link Ticket} creada y asociada al cliente
-     * @throws IOException si ocurre un fallo al procesar los archivos binarios adjuntos
-     */
-    Ticket crearTicketDesdePortal(CuentaPortal cuentaPortal, PortalTicketDto dto, MultipartFile[] archivos) throws IOException;
+  /**
+   * Registra un nuevo ticket de soporte iniciado por un contacto autenticado en el portal,
+   * adjuntando archivos opcionales.
+   *
+   * @param cuentaPortal cuenta del cliente que crea la incidencia
+   * @param dto datos del formulario del ticket (asunto, descripción, categoría, prioridad)
+   * @param archivos archivos adjuntos opcionales cargados en la solicitud
+   * @return entidad {@link Ticket} creada y asociada al cliente
+   * @throws IOException si ocurre un fallo al procesar los archivos binarios adjuntos
+   */
+  Ticket crearTicketDesdePortal(
+      CuentaPortal cuentaPortal, PortalTicketDto dto, MultipartFile[] archivos) throws IOException;
 
-    void responderEncuestaCsat(Long encuestaId, Integer puntuacion, String comentario, CuentaPortal cuenta);
+  void responderEncuestaCsat(
+      Long encuestaId, Integer puntuacion, String comentario, CuentaPortal cuenta);
 
-    /**
-     * Registra un nuevo comentario o respuesta del cliente en un ticket existente.
-     *
-     * @param ticketId identificador del ticket
-     * @param contenido texto del mensaje enviado por el cliente
-     * @param cuentaPortal cuenta del cliente autenticado en el portal
-     */
-    void agregarComentarioDesdePortal(Long ticketId, String contenido, CuentaPortal cuentaPortal);
+  /**
+   * Registra un nuevo comentario o respuesta del cliente en un ticket existente.
+   *
+   * @param ticketId identificador del ticket
+   * @param contenido texto del mensaje enviado por el cliente
+   * @param cuentaPortal cuenta del cliente autenticado en el portal
+   */
+  void agregarComentarioDesdePortal(Long ticketId, String contenido, CuentaPortal cuentaPortal);
+
+  /** Adjunta archivos a una incidencia existente del cliente. */
+  void agregarAdjuntosDesdePortal(
+      Long ticketId, MultipartFile[] archivos, CuentaPortal cuentaPortal) throws IOException;
 }

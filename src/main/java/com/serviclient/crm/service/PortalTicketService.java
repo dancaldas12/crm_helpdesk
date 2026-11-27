@@ -49,7 +49,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class PortalTicketService implements IPortalTicketService {
 
-  private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+  private static final long MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
   private static final Set<String> EXTENSIONES_PERMITIDAS =
       Set.of("png", "jpg", "jpeg", "pdf", "txt");
@@ -118,6 +118,46 @@ public class PortalTicketService implements IPortalTicketService {
     guardarAdjuntos(ticket, archivos);
 
     return ticket;
+  }
+
+  @Override
+  @Transactional(rollbackFor = IOException.class)
+  public void agregarAdjuntosDesdePortal(
+      Long ticketId, MultipartFile[] archivos, CuentaPortal cuentaPortal) throws IOException {
+
+    if (cuentaPortal == null
+        || !cuentaPortal.estaActiva()
+        || cuentaPortal.getContacto() == null
+        || cuentaPortal.getContacto().getCliente() == null) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cuenta no disponible.");
+    }
+
+    Long clienteId = cuentaPortal.getContacto().getCliente().getId();
+    Long empresaId = cuentaPortal.getContacto().getCliente().getEmpresa().getId();
+
+    Ticket ticket = ticketService.obtenerPorIdYEmpresa(ticketId, empresaId);
+
+    if (!clienteId.equals(ticket.getCliente().getId())) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket no encontrado.");
+    }
+
+    if (ticket.getEstado() == EstadoTicket.CERRADO) {
+      throw new IllegalArgumentException("No se pueden agregar archivos a un ticket cerrado.");
+    }
+
+    if (archivos == null || Arrays.stream(archivos).noneMatch(a -> a != null && !a.isEmpty())) {
+      throw new IllegalArgumentException("Selecciona al menos un archivo.");
+    }
+
+    // Validar todos los archivos antes de guardar.
+    for (MultipartFile archivo : archivos) {
+      if (archivo != null && !archivo.isEmpty()) {
+        validarArchivo(archivo);
+      }
+    }
+
+    // Reutilizar el almacenamiento existente.
+    guardarAdjuntos(ticket, archivos);
   }
 
   @Override
@@ -278,8 +318,7 @@ public class PortalTicketService implements IPortalTicketService {
    */
   private void guardarAdjuntos(Ticket ticket, MultipartFile[] archivos) throws IOException {
 
-    if (archivos == null || Arrays.stream(archivos)
-        .noneMatch(a -> a != null && !a.isEmpty())) {
+    if (archivos == null || Arrays.stream(archivos).noneMatch(a -> a != null && !a.isEmpty())) {
       return;
     }
 

@@ -1975,3 +1975,8 @@ body {
     outline: 2px solid #6366f1;
     outline-offset: -2px;
 }
+
+/* Evitar que las burbujas se compriman al crecer el chat */
+#chatMensajes > .chat-bubble {
+    flex-shrink: 0;
+}

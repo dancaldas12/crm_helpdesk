@@ -306,12 +306,12 @@
             </header>
 
             <!-- Alerts Banner -->
-            <div style="padding: 20px 32px 0 32px" th:if="${(successMessage != null
+            <div id="alertasSistema" style="padding: 20px 32px 0 32px" th:if="${(successMessage != null
                         or errorMessage != null
                         or portalPasswordTemporal != null)
                         and !(pageTitle == 'Cliente 360°'
                             and portalPasswordTemporal != null)}">
-                <div th:if="${successMessage != null}" style="
+                <div th:if="${successMessage != null}" data-chat-feedback="success" style="
                             background-color: #ecfdf5;
                             border: 1px solid #a7f3d0;
                             color: #065f46;
@@ -323,7 +323,7 @@
                         ">
                     <span th:text="${successMessage}"></span>
                 </div>
-                <div th:if="${errorMessage != null}" style="
+                <div th:if="${errorMessage != null}" data-chat-feedback="error" style="
                             background-color: #fef2f2;
                             border: 1px solid #fecaca;
                             color: #991b1b;
