@@ -48,6 +48,8 @@ services:
       DB_USER: ${DB_USER:-serviclient_user}
       DB_PASSWORD: ${DB_PASSWORD:-serviclient_pass}
       TZ: ${TZ:-America/Lima}
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       mysql:
         condition: service_healthy
@@ -108,11 +110,13 @@ networks:
     driver: bridge
 
 # ------------------------------------------------------------------------------
-# Volumen persistente para datos de MySQL
+# Volumen persistente para datos de MySQL y archivos adjuntos
 # ------------------------------------------------------------------------------
 volumes:
   mysql_data:
     name: crm_helpdesk_mysql_data
+  uploads_data:
+    name: crm_helpdesk_uploads_data
   sonar_db_data:
     name: crm_helpdesk_sonar_db_data
   sonar_data:
@@ -121,4 +125,3 @@ volumes:
     name: crm_helpdesk_sonar_extensions
   sonar_logs:
     name: crm_helpdesk_sonar_logs
-

@@ -111,6 +111,8 @@ public class PortalTicketController {
             cargarDatosUsuarioAutenticado(model, cuenta);
             model.addAttribute("categorias", CategoriaTicket.values());
             model.addAttribute("prioridades", PrioridadTicket.values());
+            model.addAttribute("errorMessage",
+    "Revisa los campos obligatorios e inténtalo nuevamente.");
             return "portal/nueva-incidencia";
         }
 
@@ -131,7 +133,9 @@ public class PortalTicketController {
             cargarDatosUsuarioAutenticado(model, cuenta);
             model.addAttribute("categorias", CategoriaTicket.values());
             model.addAttribute("prioridades", PrioridadTicket.values());
-            model.addAttribute("errorMessage", ex.getMessage());
+            model.addAttribute("errorMessage",
+    "No se pudo completar el envío de la incidencia. Verifica los datos y archivos " +
+    "e inténtalo nuevamente.");
             return "portal/nueva-incidencia";
         }
 

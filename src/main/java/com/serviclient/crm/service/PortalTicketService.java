@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.Arrays;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -67,7 +68,7 @@ public class PortalTicketService implements IPortalTicketService {
    * @throws IllegalStateException si la cuenta del portal carece de relación con un contacto o
    *     cliente
    */
-  @Transactional
+  @Transactional(rollbackFor = IOException.class)
   public Ticket crearTicketDesdePortal(
       CuentaPortal cuentaPortal, PortalTicketDto dto, MultipartFile[] archivos) throws IOException {
 
@@ -183,9 +184,10 @@ public class PortalTicketService implements IPortalTicketService {
    */
   private void guardarAdjuntos(Ticket ticket, MultipartFile[] archivos) throws IOException {
 
-    if (archivos == null || archivos.length == 0) {
-      return;
-    }
+    if (archivos == null || Arrays.stream(archivos)
+        .noneMatch(a -> a != null && !a.isEmpty())) {
+  return;
+}
 
     Path directorio = Paths.get("uploads", "tickets", ticket.getId().toString());
 

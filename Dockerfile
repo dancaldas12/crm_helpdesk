@@ -35,8 +35,8 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
-RUN mkdir -p /app/logs && \
-  chown -R appuser:appgroup /app/logs
+RUN mkdir -p /app/logs /app/uploads && \
+    chown -R appuser:appgroup /app/logs /app/uploads
 
 # Copiar el archivo JAR empaquetado desde la fase de construcción
 COPY --from=builder --chown=appuser:appgroup /build/target/*.jar /app/app.jar

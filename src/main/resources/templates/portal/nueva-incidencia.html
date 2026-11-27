@@ -57,9 +57,30 @@
                     ayudarte.</p>
             </div>
 
+            <!-- ALERTA DE ERROR GENERAL O DE ADJUNTOS -->
+            <div th:if="${errorMessage}" role="alert"
+                class="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium flex items-center gap-3">
+                <i class="fa-solid fa-circle-exclamation text-base text-red-500"></i>
+                <span th:text="${errorMessage}">Error al registrar la incidencia.</span>
+            </div>
+
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+
                 <form th:action="@{/portal/tickets}" th:object="${ticketForm}" method="post"
                     enctype="multipart/form-data" class="space-y-6">
+
+                    <!-- Token CSRF explícito para envío multipart -->
+                    <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}"
+                        th:value="${_csrf.token}" />
+
+                    <!-- Alerta si hay errores de validación en los campos -->
+                    <div th:if="${#fields.hasAnyErrors()}"
+                        class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs space-y-1">
+                        <p class="font-bold">Revisa los siguientes campos:</p>
+                        <ul class="list-disc list-inside">
+                            <li th:each="err : ${#fields.allErrors()}" th:text="${err}">Error de validación</li>
+                        </ul>
+                    </div>
 
                     <!-- Título / Asunto -->
                     <div class="space-y-1.5">
@@ -114,9 +135,10 @@
                         <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
                             Archivos Adjuntos
                         </label>
-                        <div
+                        <div id="dropZone"
                             class="relative border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-2xl p-8 bg-indigo-50/20 text-center transition group cursor-pointer flex flex-col items-center justify-center">
                             <input type="file" name="archivos" id="inputArchivos" multiple
+                                accept=".png,.jpg,.jpeg,.pdf,.txt,image/png,image/jpeg,application/pdf,text/plain"
                                 class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
                             <div
                                 class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-lg mb-3 group-hover:scale-105 transition">
@@ -206,24 +228,49 @@
 
     <!-- SCRIPTS -->
     <script th:inline="javascript">
-        // 1. Manejador de subida de archivos
+        // 1. Manejador de subida de archivos (clic y drag & drop)
         const input = document.getElementById('inputArchivos');
+        const dropZone = document.getElementById('dropZone');
         const lista = document.getElementById('listaArchivos');
         const texto = document.getElementById('textoSubida');
 
+        function actualizarListaArchivos() {
+            if (!input || !lista || !texto) return;
+            lista.innerHTML = '';
+            if (input.files && input.files.length > 0) {
+                texto.innerText = `${input.files.length} archivo(s) seleccionado(s)`;
+                Array.from(input.files).forEach(file => {
+                    const badge = document.createElement('span');
+                    badge.className = 'px-2.5 py-1 rounded-lg bg-white border border-indigo-200 text-indigo-700 text-[11px] font-semibold flex items-center gap-1.5 shadow-sm';
+                    badge.innerHTML = `<i class="fa-regular fa-file"></i> ${file.name}`;
+                    lista.appendChild(badge);
+                });
+            } else {
+                texto.innerText = 'Arrastra archivos aquí o haz clic para seleccionar';
+            }
+        }
+
         if (input) {
-            input.addEventListener('change', () => {
-                lista.innerHTML = '';
-                if (input.files.length > 0) {
-                    texto.innerText = `${input.files.length} archivo(s) seleccionado(s)`;
-                    Array.from(input.files).forEach(file => {
-                        const badge = document.createElement('span');
-                        badge.className = 'px-2.5 py-1 rounded-lg bg-white border border-indigo-200 text-indigo-700 text-[11px] font-semibold flex items-center gap-1.5 shadow-sm';
-                        badge.innerHTML = `<i class="fa-regular fa-file"></i> ${file.name}`;
-                        lista.appendChild(badge);
-                    });
-                } else {
-                    texto.innerText = 'Arrastra archivos aquí o haz clic para seleccionar';
+            input.addEventListener('change', actualizarListaArchivos);
+        }
+
+        if (dropZone && input) {
+            ['dragenter', 'dragover'].forEach(evt => {
+                dropZone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('border-indigo-500', 'bg-indigo-50/60');
+                });
+            });
+            ['dragleave', 'drop'].forEach(evt => {
+                dropZone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('border-indigo-500', 'bg-indigo-50/60');
+                });
+            });
+            dropZone.addEventListener('drop', (e) => {
+                if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    input.files = e.dataTransfer.files;
+                    actualizarListaArchivos();
                 }
             });
         }
@@ -232,22 +279,18 @@
         const userBtn = document.getElementById('userDropdownBtn');
         const userDropdown = document.getElementById('userDropdown');
 
-        // Modales
         const miCuentaModal = document.getElementById('miCuentaModal');
         const passModal = document.getElementById('passwordModal');
 
-        // Botones Mi Cuenta
         const openMiCuentaBtn = document.getElementById('openMiCuentaModalBtn');
         const closeMiCuentaBtn = document.getElementById('closeMiCuentaModalBtn');
         const closeMiCuentaFooterBtn = document.getElementById('closeMiCuentaFooterBtn');
         const switchToPassBtn = document.getElementById('switchToPasswordModalBtn');
 
-        // Botones Password
         const openPassBtn = document.getElementById('openPasswordModalBtn');
         const closePassBtn = document.getElementById('closePasswordModalBtn');
         const cancelPassBtn = document.getElementById('cancelPasswordModalBtn');
 
-        // Toggle del menú del usuario
         if (userBtn && userDropdown) {
             userBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -260,7 +303,6 @@
             });
         }
 
-        // Control de Apertura / Cierre
         function abrirMiCuenta() {
             if (miCuentaModal) miCuentaModal.classList.remove('hidden');
             if (userDropdown) userDropdown.classList.add('hidden');
@@ -280,18 +322,15 @@
             if (passModal) passModal.classList.add('hidden');
         }
 
-        // Eventos Mi Cuenta
         if (openMiCuentaBtn) openMiCuentaBtn.addEventListener('click', abrirMiCuenta);
         if (closeMiCuentaBtn) closeMiCuentaBtn.addEventListener('click', cerrarMiCuenta);
         if (closeMiCuentaFooterBtn) closeMiCuentaFooterBtn.addEventListener('click', cerrarMiCuenta);
         if (switchToPassBtn) switchToPassBtn.addEventListener('click', abrirPassword);
 
-        // Eventos Password
         if (openPassBtn) openPassBtn.addEventListener('click', abrirPassword);
         if (closePassBtn) closePassBtn.addEventListener('click', cerrarPassword);
         if (cancelPassBtn) cancelPassBtn.addEventListener('click', cerrarPassword);
 
-        // Cerrar al hacer clic en el backdrop
         if (miCuentaModal) {
             miCuentaModal.addEventListener('click', (e) => {
                 if (e.target === miCuentaModal) cerrarMiCuenta();
@@ -303,7 +342,6 @@
             });
         }
 
-        // Reabrir automáticamente si viene un mensaje de error o éxito
         /*[# th:if="${abrirModalPassword}"]*/
         abrirPassword();
         /*[/]*/
