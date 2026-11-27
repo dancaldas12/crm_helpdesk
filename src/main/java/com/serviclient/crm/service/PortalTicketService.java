@@ -7,17 +7,24 @@ import com.serviclient.crm.entity.EncuestaCsat;
 import com.serviclient.crm.entity.RespuestaCsat;
 import com.serviclient.crm.entity.Ticket;
 import com.serviclient.crm.entity.TicketAdjunto;
+import com.serviclient.crm.entity.TicketHistorial;
+import com.serviclient.crm.entity.TicketMensaje;
 import com.serviclient.crm.entity.enums.CanalOrigen;
 import com.serviclient.crm.entity.enums.EstadoEncuestaCsat;
+import com.serviclient.crm.entity.enums.EstadoTicket;
+import com.serviclient.crm.entity.enums.TipoMensajeTicket;
 import com.serviclient.crm.entity.enums.TipoNotificacion;
 import com.serviclient.crm.repository.EncuestaCsatRepository;
 import com.serviclient.crm.repository.RespuestaCsatRepository;
 import com.serviclient.crm.repository.TicketAdjuntoRepository;
+import com.serviclient.crm.repository.TicketHistorialRepository;
+import com.serviclient.crm.repository.TicketMensajeRepository;
+import com.serviclient.crm.repository.TicketRepository;
 import java.io.IOException;
 import java.nio.file.*;
 import java.time.LocalDateTime;
-import java.util.Set;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -48,6 +55,9 @@ public class PortalTicketService implements IPortalTicketService {
       Set.of("png", "jpg", "jpeg", "pdf", "txt");
 
   private final TicketService ticketService;
+  private final TicketRepository ticketRepository;
+  private final TicketMensajeRepository ticketMensajeRepository;
+  private final TicketHistorialRepository ticketHistorialRepository;
   private final TicketAdjuntoRepository ticketAdjuntoRepository;
   private final EncuestaCsatRepository encuestaCsatRepository;
   private final RespuestaCsatRepository respuestaCsatRepository;
@@ -68,6 +78,7 @@ public class PortalTicketService implements IPortalTicketService {
    * @throws IllegalStateException si la cuenta del portal carece de relación con un contacto o
    *     cliente
    */
+  @Override
   @Transactional(rollbackFor = IOException.class)
   public Ticket crearTicketDesdePortal(
       CuentaPortal cuentaPortal, PortalTicketDto dto, MultipartFile[] archivos) throws IOException {
@@ -107,6 +118,89 @@ public class PortalTicketService implements IPortalTicketService {
     guardarAdjuntos(ticket, archivos);
 
     return ticket;
+  }
+
+  @Override
+  @Transactional
+  public void agregarComentarioDesdePortal(
+      Long ticketId, String contenido, CuentaPortal cuentaPortal) {
+
+    if (cuentaPortal == null || !cuentaPortal.estaActiva()) {
+      throw new IllegalArgumentException(
+          "La cuenta del portal no está disponible o se encuentra inactiva.");
+    }
+
+    if (cuentaPortal.getContacto() == null || cuentaPortal.getContacto().getCliente() == null) {
+      throw new IllegalStateException(
+          "La cuenta del portal no tiene un contacto o cliente asociado.");
+    }
+
+    String textoLimpio = contenido == null ? "" : contenido.trim();
+    if (textoLimpio.isEmpty()) {
+      throw new IllegalArgumentException("El mensaje no puede estar vacío.");
+    }
+    if (textoLimpio.length() > 5000) {
+      throw new IllegalArgumentException("El mensaje no puede superar los 5000 caracteres.");
+    }
+
+    Long clienteId = cuentaPortal.getContacto().getCliente().getId();
+    Long empresaId = cuentaPortal.getContacto().getCliente().getEmpresa().getId();
+
+    Ticket ticket = ticketService.obtenerPorIdYEmpresa(ticketId, empresaId);
+
+    if (!clienteId.equals(ticket.getCliente().getId())) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket no encontrado.");
+    }
+
+    if (ticket.getEstado() == EstadoTicket.CERRADO) {
+      throw new IllegalArgumentException(
+          "Este ticket está cerrado y no admite nuevos comentarios.");
+    }
+
+    LocalDateTime ahora = LocalDateTime.now();
+
+    TicketMensaje nuevoMensaje =
+        TicketMensaje.builder()
+            .ticket(ticket)
+            .contacto(cuentaPortal.getContacto())
+            .usuario(null)
+            .tipo(TipoMensajeTicket.CLIENTE)
+            .mensaje(textoLimpio)
+            .esInterno(false)
+            .createdAt(ahora)
+            .build();
+
+    ticketMensajeRepository.save(nuevoMensaje);
+
+    // Si el ticket estaba resuelto o pendiente de respuesta del cliente, volver a EN_PROCESO
+    if (ticket.getEstado() == EstadoTicket.RESUELTO
+        || ticket.getEstado() == EstadoTicket.PENDIENTE) {
+      String anterior = ticket.getEstado().getEtiqueta();
+      ticket.setEstado(EstadoTicket.EN_PROCESO);
+      ticketRepository.save(ticket);
+
+      ticketHistorialRepository.save(
+          TicketHistorial.builder()
+              .ticket(ticket)
+              .usuario(null)
+              .tipoEvento("ESTADO")
+              .valorAnterior(anterior)
+              .valorNuevo(EstadoTicket.EN_PROCESO.getEtiqueta())
+              .descripcion("Reabierto por respuesta del cliente desde el portal")
+              .createdAt(ahora)
+              .build());
+    }
+
+    // Registrar evento en el historial del ticket
+    ticketHistorialRepository.save(
+        TicketHistorial.builder()
+            .ticket(ticket)
+            .usuario(null)
+            .tipoEvento("RESPUESTA_CLIENTE")
+            .descripcion(
+                textoLimpio.length() > 60 ? textoLimpio.substring(0, 57) + "..." : textoLimpio)
+            .createdAt(ahora)
+            .build());
   }
 
   @Override
@@ -186,8 +280,8 @@ public class PortalTicketService implements IPortalTicketService {
 
     if (archivos == null || Arrays.stream(archivos)
         .noneMatch(a -> a != null && !a.isEmpty())) {
-  return;
-}
+      return;
+    }
 
     Path directorio = Paths.get("uploads", "tickets", ticket.getId().toString());
 

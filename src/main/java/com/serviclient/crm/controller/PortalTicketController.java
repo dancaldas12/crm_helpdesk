@@ -52,6 +52,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * GET  /portal/tickets/nuevo                           → Formulario de nueva incidencia
  * POST /portal/tickets                                 → Registrar nueva incidencia con adjuntos
  * GET  /portal/tickets/{id}                            → Detalle del ticket del cliente
+ * POST /portal/tickets/{id}/mensajes                   → Registrar comentario del cliente en el ticket
  * GET  /portal/tickets/{ticketId}/adjuntos/{adjuntoId} → Descargar/visualizar archivo adjunto
  * </pre>
  *
@@ -112,7 +113,7 @@ public class PortalTicketController {
             model.addAttribute("categorias", CategoriaTicket.values());
             model.addAttribute("prioridades", PrioridadTicket.values());
             model.addAttribute("errorMessage",
-    "Revisa los campos obligatorios e inténtalo nuevamente.");
+                    "Revisa los campos obligatorios e inténtalo nuevamente.");
             return "portal/nueva-incidencia";
         }
 
@@ -134,8 +135,8 @@ public class PortalTicketController {
             model.addAttribute("categorias", CategoriaTicket.values());
             model.addAttribute("prioridades", PrioridadTicket.values());
             model.addAttribute("errorMessage",
-    "No se pudo completar el envío de la incidencia. Verifica los datos y archivos " +
-    "e inténtalo nuevamente.");
+                    "No se pudo completar el envío de la incidencia. Verifica los datos y archivos " +
+                    "e inténtalo nuevamente.");
             return "portal/nueva-incidencia";
         }
 
@@ -171,6 +172,31 @@ public class PortalTicketController {
         model.addAttribute("ticket", ticket);
 
         return "portal/detalle-ticket";
+    }
+
+    /**
+     * Registra un nuevo comentario o respuesta del cliente en un ticket existente.
+     */
+    @Operation(summary = "Agregar comentario al ticket desde el portal")
+    @ApiResponse(responseCode = "302", description = "Comentario registrado y redirección al detalle")
+    @PostMapping("/{id}/mensajes")
+    public String agregarComentario(
+            @PathVariable Long id,
+            @RequestParam("contenido") String contenido,
+            Principal principal,
+            RedirectAttributes redirectAttributes) {
+
+        CuentaPortal cuenta = obtenerCuenta(principal);
+
+        try {
+            portalTicketService.agregarComentarioDesdePortal(id, contenido, cuenta);
+            redirectAttributes.addFlashAttribute("mensajeExito", "Tu comentario fue enviado correctamente.");
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            log.warn("Error al registrar comentario en ticket id={}: {}", id, ex.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+
+        return "redirect:/portal/tickets/" + id;
     }
 
     /**

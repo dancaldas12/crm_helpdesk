@@ -27,4 +27,13 @@ public interface IPortalTicketService {
     Ticket crearTicketDesdePortal(CuentaPortal cuentaPortal, PortalTicketDto dto, MultipartFile[] archivos) throws IOException;
 
     void responderEncuestaCsat(Long encuestaId, Integer puntuacion, String comentario, CuentaPortal cuenta);
+
+    /**
+     * Registra un nuevo comentario o respuesta del cliente en un ticket existente.
+     *
+     * @param ticketId identificador del ticket
+     * @param contenido texto del mensaje enviado por el cliente
+     * @param cuentaPortal cuenta del cliente autenticado en el portal
+     */
+    void agregarComentarioDesdePortal(Long ticketId, String contenido, CuentaPortal cuentaPortal);
 }
